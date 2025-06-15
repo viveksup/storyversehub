@@ -1,0 +1,407 @@
+/* Enhanced Story Reader Styles */
+.enhanced-story-reader {
+  min-height: 100vh;
+  background-color: var(--space-dark);
+  color: var(--text-light);
+  transition: all 0.3s ease;
+}
+
+/* Header */
+.reader-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: var(--space-base);
+  border-bottom: 1px solid var(--space-light);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.story-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.story-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-light);
+}
+
+.story-author {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reading-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background-color: var(--space-light);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+/* Progress Bar */
+.reading-progress-bar {
+  height: 4px;
+  background-color: var(--space-light);
+  position: sticky;
+  top: 73px;
+  z-index: 19;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--secondary-500));
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+/* Settings Panel */
+.settings-panel {
+  position: fixed;
+  top: 80px;
+  right: 2rem;
+  width: 300px;
+  background-color: var(--space-base);
+  border: 1px solid var(--space-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--space-light);
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-light);
+}
+
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.setting-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.setting-group label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.setting-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Main Content */
+.reader-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 200px);
+}
+
+.text-content {
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  padding: 1rem;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.02);
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-500) rgba(255, 255, 255, 0.1);
+}
+
+.text-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.text-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.text-content::-webkit-scrollbar-thumb {
+  background-color: var(--primary-500);
+  border-radius: 10px;
+}
+
+.story-text {
+  font-family: 'Georgia', serif;
+  color: var(--text-light);
+}
+
+.story-paragraph {
+  margin-bottom: 1.5rem;
+  text-align: justify;
+  text-indent: 2rem;
+}
+
+.story-paragraph:first-child {
+  text-indent: 0;
+}
+
+/* Audio Content */
+.audio-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.audio-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  background-color: var(--space-base);
+  border-radius: 20px;
+  border: 1px solid var(--space-light);
+}
+
+.audio-cover {
+  width: 200px;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.audio-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.audio-info {
+  text-align: center;
+}
+
+.audio-info h3 {
+  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-light);
+}
+
+.audio-info p {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Reading Stats */
+.reading-stats {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  display: flex;
+  gap: 1rem;
+  background-color: var(--space-base);
+  border: 1px solid var(--space-light);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(10px);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+/* Light Theme Overrides */
+[data-theme="light"] .enhanced-story-reader {
+  background-color: #ffffff;
+  color: #212529;
+}
+
+[data-theme="light"] .reader-header {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-bottom-color: #e9ecef;
+}
+
+[data-theme="light"] .story-title {
+  color: #212529;
+}
+
+[data-theme="light"] .story-author {
+  color: #6c757d;
+}
+
+[data-theme="light"] .reading-progress-bar {
+  background-color: #e9ecef;
+}
+
+[data-theme="light"] .settings-panel {
+  background-color: #ffffff;
+  border-color: #e9ecef;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .text-content {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .story-text {
+  color: #212529;
+}
+
+[data-theme="light"] .audio-player {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+}
+
+[data-theme="light"] .reading-stats {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: #e9ecef;
+}
+
+[data-theme="light"] .stat-value {
+  color: #212529;
+}
+
+[data-theme="light"] .text-content::-webkit-scrollbar-track {
+  background: #e9ecef;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .reader-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .header-left,
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .reader-content {
+    padding: 1rem;
+  }
+
+  .settings-panel {
+    right: 1rem;
+    left: 1rem;
+    width: auto;
+  }
+
+  .reading-stats {
+    bottom: 1rem;
+    right: 1rem;
+    left: 1rem;
+    justify-content: space-around;
+  }
+
+  .story-paragraph {
+    text-indent: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .reading-mode-selector {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .audio-cover {
+    width: 150px;
+    height: 225px;
+  }
+
+  .audio-info h3 {
+    font-size: 1.2rem;
+  }
+}
+
+/* Accessibility */
+.enhanced-story-reader button:focus {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+.text-content:focus {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+  .reader-header,
+  .reading-progress-bar,
+  .settings-panel,
+  .reading-stats {
+    display: none;
+  }
+
+  .text-content {
+    max-height: none;
+    overflow: visible;
+    background: none;
+  }
+
+  .story-paragraph {
+    page-break-inside: avoid;
+  }
+}
