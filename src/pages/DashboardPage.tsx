@@ -2,25 +2,45 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   BookOpen, Clock, TrendingUp, Star, 
-  History, Bookmark, Heart, Plus,
-  ChevronRight, Sparkles, BookText
+  Plus, Eye, Heart, Bookmark, Users,
+  ChevronRight, Sparkles, BookText, Activity
 } from 'lucide-react';
-import StoryCard from '../components/ui/StoryCard';
-import CategoryCard from '../components/ui/CategoryCard';
+import StoriesGrid from '../components/stories/StoriesGrid';
+import CategoryGrid from '../components/stories/CategoryGrid';
 import Button from '../components/ui/Button';
 import RealtimeStats from '../components/dashboard/RealtimeStats';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import { supabase } from '../lib/supabase';
+import { useStories } from '../hooks/useStories';
+import { useCategories } from '../hooks/useCategories';
+import { useDashboardData } from '../hooks/useDashboardData';
 import { useRealtimeUserData } from '../hooks/useRealtimeUserData';
-import { mockStories, mockCategories } from '../data/mockData';
 
 const DashboardPage: React.FC = () => {
   const [user, setUser] = useState<any>(null);
-  const [readingList, setReadingList] = useState<any[]>([]);
-  const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
 
+  // Fetch user's recent stories and recommendations
+  const { stories: recentStories, loading: recentLoading } = useStories({
+    sort_by: 'published_at',
+    sort_order: 'desc',
+    limit: 4
+  });
+
+  const { stories: featuredStories, loading: featuredLoading } = useStories({
+    is_featured: true,
+    limit: 4
+  });
+
+  const { stories: popularStories, loading: popularLoading } = useStories({
+    sort_by: 'views_count',
+    sort_order: 'desc',
+    limit: 4
+  });
+
+  const { categories, loading: categoriesLoading } = useCategories();
+  const { stats, loading: statsLoading } = useDashboardData(user?.id);
+  
   const { 
     userStats, 
     startReadingSession, 
@@ -47,26 +67,6 @@ const DashboardPage: React.FC = () => {
         .single();
 
       setProfile(profiles);
-
-      // Load reading list
-      const { data: bookmarks } = await supabase
-        .from('bookmarks')
-        .select('content_id')
-        .eq('user_id', user.id)
-        .limit(4);
-
-      // Load recently viewed
-      const { data: history } = await supabase
-        .from('reading_history')
-        .select('content_id')
-        .eq('user_id', user.id)
-        .order('last_read_at', { ascending: false })
-        .limit(4);
-
-      // For demo, using mock data
-      setReadingList(mockStories.slice(0, 4));
-      setRecentlyViewed(mockStories.slice(2, 6));
-      setRecommendations(mockStories.slice(4, 8));
     } catch (error) {
       console.error('Error loading user data:', error);
     }
@@ -81,12 +81,26 @@ const DashboardPage: React.FC = () => {
 
   const handleLikeStory = async (storyId: string) => {
     if (user?.id) {
+      await supabase
+        .from('user_story_interactions')
+        .upsert({
+          user_id: user.id,
+          story_id: storyId,
+          interaction_type: 'like'
+        });
       await logUserActivity('story_liked', storyId);
     }
   };
 
   const handleBookmarkStory = async (storyId: string) => {
     if (user?.id) {
+      await supabase
+        .from('user_story_interactions')
+        .upsert({
+          user_id: user.id,
+          story_id: storyId,
+          interaction_type: 'bookmark'
+        });
       await logUserActivity('story_bookmarked', storyId);
     }
   };
@@ -96,8 +110,8 @@ const DashboardPage: React.FC = () => {
   };
 
   // Get top categories for quick access
-  const topCategories = mockCategories
-    .sort((a, b) => b.count - a.count)
+  const topCategories = categories
+    .sort((a, b) => (b.story_count || 0) - (a.story_count || 0))
     .slice(0, 6);
 
   return (
@@ -114,9 +128,18 @@ const DashboardPage: React.FC = () => {
                 You're {Math.round(userStats.weeklyProgress)}% towards your weekly reading goal
               </p>
               <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                <span>🔥 {userStats.currentStreak} day streak</span>
-                <span>📚 {userStats.totalStoriesRead} stories read</span>
-                <span>⏱️ {Math.floor(userStats.totalReadingTime / 60)}h reading time</span>
+                <span className="flex items-center gap-1">
+                  <Activity size={16} className="text-success-400" />
+                  {userStats.currentStreak} day streak
+                </span>
+                <span className="flex items-center gap-1">
+                  <BookOpen size={16} className="text-primary-400" />
+                  {userStats.totalStoriesRead} stories read
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock size={16} className="text-secondary-400" />
+                  {Math.floor(userStats.totalReadingTime / 60)}h reading time
+                </span>
               </div>
             </div>
             <div className="flex gap-4">
@@ -147,8 +170,63 @@ const DashboardPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content Column */}
           <div className="lg:col-span-2 space-y-8">
+            {/* Platform Statistics */}
+            <section>
+              <h2 className="text-2xl font-display font-semibold text-white mb-6">
+                Platform Overview
+              </h2>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <BookOpen size={20} className="text-primary-400" />
+                    <span className="text-xs text-success-400">
+                      +{stats.storiesThisWeek} this week
+                    </span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-white">
+                    {stats.totalStories.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-400">Total Stories</p>
+                </div>
+
+                <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <Eye size={20} className="text-secondary-400" />
+                    <span className="text-xs text-success-400">
+                      +{stats.viewsThisWeek} this week
+                    </span>
+                  </div>
+                  <p className="text-2xl font-display font-bold text-white">
+                    {stats.totalViews.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-400">Total Views</p>
+                </div>
+
+                <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <Users size={20} className="text-accent-400" />
+                  </div>
+                  <p className="text-2xl font-display font-bold text-white">
+                    {stats.totalUsers.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-400">Active Users</p>
+                </div>
+
+                <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <Heart size={20} className="text-error-400" />
+                  </div>
+                  <p className="text-2xl font-display font-bold text-white">
+                    {stats.totalLikes.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-400">Total Likes</p>
+                </div>
+              </div>
+            </section>
+
             {/* Popular Categories Quick Access */}
-            <div>
+            <section>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-display font-semibold text-white">
                   Browse by Category
@@ -161,78 +239,96 @@ const DashboardPage: React.FC = () => {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-8">
-                {topCategories.map(category => (
-                  <CategoryCard key={category.id} category={category} />
-                ))}
-              </div>
-            </div>
+              <CategoryGrid 
+                categories={topCategories} 
+                loading={categoriesLoading} 
+                error={null}
+              />
+            </section>
 
-            {/* Continue Reading */}
-            <div>
+            {/* Featured Stories */}
+            <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-semibold text-white">
-                  Continue Reading
+                <h2 className="text-2xl font-display font-semibold text-white flex items-center gap-2">
+                  <Star size={24} className="text-accent-400" />
+                  Featured Stories
                 </h2>
                 <Link 
-                  to="/library"
+                  to="/explore?featured=true"
                   className="text-primary-400 hover:text-primary-300 flex items-center"
                 >
                   View All <ChevronRight size={16} className="ml-1" />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {recentlyViewed.slice(0, 2).map(story => (
-                  <div key={story.id} onClick={() => handleStoryClick(story.id)}>
-                    <StoryCard story={story} showFull={true} />
-                  </div>
-                ))}
-              </div>
-            </div>
+              <StoriesGrid
+                stories={featuredStories}
+                loading={featuredLoading}
+                error={null}
+                hasMore={false}
+                onLoadMore={() => {}}
+                onLike={user ? handleLikeStory : undefined}
+                onBookmark={user ? handleBookmarkStory : undefined}
+                emptyMessage="No featured stories available"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+              />
+            </section>
 
-            {/* Recommended for You */}
-            <div>
+            {/* Popular Stories */}
+            <section>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-semibold text-white">
-                  Recommended for You
+                <h2 className="text-2xl font-display font-semibold text-white flex items-center gap-2">
+                  <TrendingUp size={24} className="text-success-400" />
+                  Trending Stories
+                </h2>
+                <Link 
+                  to="/explore?sort=views"
+                  className="text-primary-400 hover:text-primary-300 flex items-center"
+                >
+                  View All <ChevronRight size={16} className="ml-1" />
+                </Link>
+              </div>
+
+              <StoriesGrid
+                stories={popularStories}
+                loading={popularLoading}
+                error={null}
+                hasMore={false}
+                onLoadMore={() => {}}
+                onLike={user ? handleLikeStory : undefined}
+                onBookmark={user ? handleBookmarkStory : undefined}
+                emptyMessage="No trending stories available"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+              />
+            </section>
+
+            {/* Recent Stories */}
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-display font-semibold text-white flex items-center gap-2">
+                  <Clock size={24} className="text-primary-400" />
+                  Latest Stories
                 </h2>
                 <Link 
                   to="/explore"
                   className="text-primary-400 hover:text-primary-300 flex items-center"
                 >
-                  Explore More <ChevronRight size={16} className="ml-1" />
+                  View All <ChevronRight size={16} className="ml-1" />
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {recommendations.slice(0, 4).map(story => (
-                  <div key={story.id} className="group">
-                    <div onClick={() => handleStoryClick(story.id)}>
-                      <StoryCard story={story} showFull={true} />
-                    </div>
-                    <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button 
-                        variant="ghost"
-                        size="sm"
-                        leftIcon={<Heart size={14} />}
-                        onClick={() => handleLikeStory(story.id)}
-                      >
-                        Like
-                      </Button>
-                      <Button 
-                        variant="ghost"
-                        size="sm"
-                        leftIcon={<Bookmark size={14} />}
-                        onClick={() => handleBookmarkStory(story.id)}
-                      >
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+              <StoriesGrid
+                stories={recentStories}
+                loading={recentLoading}
+                error={null}
+                hasMore={false}
+                onLoadMore={() => {}}
+                onLike={user ? handleLikeStory : undefined}
+                onBookmark={user ? handleBookmarkStory : undefined}
+                emptyMessage="No recent stories available"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-6"
+              />
+            </section>
 
             {/* Activity Feed */}
             {user?.id && <ActivityFeed userId={user.id} />}
@@ -249,38 +345,46 @@ const DashboardPage: React.FC = () => {
                 Quick Actions
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <Button 
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<BookText size={16} />}
-                  className="w-full"
-                >
-                  My Stories
-                </Button>
-                <Button 
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<Bookmark size={16} />}
-                  className="w-full"
-                >
-                  Reading List
-                </Button>
-                <Button 
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<History size={16} />}
-                  className="w-full"
-                >
-                  History
-                </Button>
-                <Button 
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<Heart size={16} />}
-                  className="w-full"
-                >
-                  Liked
-                </Button>
+                <Link to="/create">
+                  <Button 
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Plus size={16} />}
+                    className="w-full"
+                  >
+                    Create
+                  </Button>
+                </Link>
+                <Link to="/profile">
+                  <Button 
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<BookText size={16} />}
+                    className="w-full"
+                  >
+                    My Stories
+                  </Button>
+                </Link>
+                <Link to="/bookmarks">
+                  <Button 
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Bookmark size={16} />}
+                    className="w-full"
+                  >
+                    Bookmarks
+                  </Button>
+                </Link>
+                <Link to="/history">
+                  <Button 
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Clock size={16} />}
+                    className="w-full"
+                  >
+                    History
+                  </Button>
+                </Link>
               </div>
             </div>
 
@@ -339,6 +443,34 @@ const DashboardPage: React.FC = () => {
                     Decrease Goal
                   </Button>
                 </div>
+              </div>
+            </div>
+
+            {/* Top Categories Stats */}
+            <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-6 border border-space-light/20">
+              <h3 className="text-xl font-display font-semibold text-white mb-4">
+                Popular Categories
+              </h3>
+              
+              <div className="space-y-3">
+                {stats.topCategories.slice(0, 5).map((category, index) => (
+                  <div key={category.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-400">
+                        #{index + 1}
+                      </span>
+                      <span className="text-white">{category.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-white">
+                        {category.story_count} stories
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {category.total_views.toLocaleString()} views
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
