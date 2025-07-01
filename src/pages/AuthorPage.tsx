@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { mockStories } from '../data/mockData';
 import StoryCard from '../components/ui/StoryCard';
-import { User, BookOpen, Star, Users, Award } from 'lucide-react';
+import { User, BookOpen, Star, Users, Award, Eye } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 const AuthorPage: React.FC = () => {
