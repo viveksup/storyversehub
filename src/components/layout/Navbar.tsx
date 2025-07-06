@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Search, Bell, Menu, X, User, Settings, 
-  LogOut, ChevronDown, Sparkles, Moon, Sun 
+  LogOut, ChevronDown, Sparkles, Moon, Sun, MessageCircle
 } from 'lucide-react';
 import Button from '../ui/Button';
+import MessageNotifications from '../messaging/MessageNotifications';
 import { supabase } from '../../lib/supabase';
 
 const Navbar: React.FC = () => {
@@ -55,6 +56,7 @@ const Navbar: React.FC = () => {
       return [
         { name: 'Dashboard', path: '/dashboard' },
         { name: 'Explore', path: '/explore' },
+        { name: 'Messages', path: '/messages' },
         { name: 'Create', path: '/create' },
         { name: 'Pricing', path: '/pricing' },
       ];
@@ -72,6 +74,10 @@ const Navbar: React.FC = () => {
     if (!error) {
       navigate('/');
     }
+  };
+
+  const handleMessageNotificationClick = (conversationId: string) => {
+    navigate(`/messages?conversation=${conversationId}`);
   };
   
   const navLinks = getNavLinks();
@@ -130,7 +136,15 @@ const Navbar: React.FC = () => {
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             
-            {/* Notifications */}
+            {/* Message Notifications */}
+            {user && (
+              <MessageNotifications
+                userId={user.id}
+                onNotificationClick={handleMessageNotificationClick}
+              />
+            )}
+            
+            {/* Regular Notifications */}
             {user && (
               <button 
                 className="p-2 text-gray-300 hover:text-white transition-colors relative"
@@ -170,6 +184,13 @@ const Navbar: React.FC = () => {
                       >
                         <User size={16} className="mr-2" />
                         Profile
+                      </Link>
+                      <Link 
+                        to="/messages" 
+                        className="flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-space-light/20 rounded-lg transition-colors"
+                      >
+                        <MessageCircle size={16} className="mr-2" />
+                        Messages
                       </Link>
                       <Link 
                         to="/settings" 

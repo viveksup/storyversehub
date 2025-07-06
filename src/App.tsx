@@ -14,6 +14,7 @@ import AuthorPage from './pages/AuthorPage';
 import CategoryPage from './pages/CategoryPage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
+import MessagesPage from './pages/MessagesPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import SupportPage from './pages/SupportPage';
@@ -52,6 +53,7 @@ function App() {
                 <Route path="/category/:id" element={<CategoryPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/messages" element={<MessagesPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/support" element={<SupportPage />} />
