@@ -186,6 +186,13 @@ const Navbar: React.FC = () => {
                         Profile
                       </Link>
                       <Link 
+                        to="/profile" 
+                        className="flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-space-light/20 rounded-lg transition-colors"
+                      >
+                        <Users size={16} className="mr-2" />
+                        Find Users
+                      </Link>
+                      <Link 
                         to="/messages" 
                         className="flex items-center px-3 py-2 text-sm text-gray-300 hover:bg-space-light/20 rounded-lg transition-colors"
                       >

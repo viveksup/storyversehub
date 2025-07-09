@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  User, Mail, Lock, Camera, Bell, Shield, 
-  LogOut, Loader2, AlertCircle, Check 
+  User, Mail, Lock, Camera, Bell, Shield, Search,
+  LogOut, Loader2, AlertCircle, Check, Users, UserPlus,
+  MessageCircle, Settings as SettingsIcon, Calendar
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Button from '../components/ui/Button';
+import FollowButton from '../components/ui/FollowButton';
+import UserSearchModal from '../components/ui/UserSearchModal';
+import { useUserInteractions } from '../hooks/useUserInteractions';
 import { z } from 'zod';
 
 const passwordSchema = z
@@ -17,10 +21,25 @@ const passwordSchema = z
 
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { userId: profileUserId } = useParams<{ userId?: string }>();
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'preferences'>('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [profileUser, setProfileUser] = useState<any>(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+    followStats,
+    loadFollowStats,
+    toggleFollow
+  } = useUserInteractions(currentUser?.id);
   
   // Profile State
   const [profile, setProfile] = useState({
@@ -47,24 +66,36 @@ const ProfilePage: React.FC = () => {
   });
   
   useEffect(() => {
-    loadUserProfile();
-  }, []);
+    loadUserData();
+  }, [profileUserId]);
   
-  const loadUserProfile = async () => {
+  const loadUserData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
       
+      setCurrentUser(user);
+      
+      // Determine if this is the user's own profile or someone else's
+      const targetUserId = profileUserId || user.id;
+      const isOwn = !profileUserId || profileUserId === user.id;
+      setIsOwnProfile(isOwn);
+      
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id);
+        .eq('id', targetUserId)
+        .single();
         
       if (error) throw error;
       
-      // Initialize profile with default values if no profile exists
-      const userProfile = profiles?.[0] || {
-        username: user.email?.split('@')[0] || '',
+      if (!profiles) {
+        throw new Error('Profile not found');
+      }
+      
+      const userProfile = {
+        ...profiles,
+        username: profiles.username || (isOwn ? user.email?.split('@')[0] : 'Unknown User') || '',
         avatar_url: '',
         bio: '',
         email_notifications: true,
@@ -74,9 +105,11 @@ const ProfilePage: React.FC = () => {
         show_activity: true,
       };
       
+      setProfileUser(userProfile);
+      
       setProfile({
         username: userProfile.username || '',
-        email: user.email || '',
+        email: isOwn ? user.email || '' : '',
         avatar_url: userProfile.avatar_url || '',
         bio: userProfile.bio || '',
       });
@@ -88,6 +121,11 @@ const ProfilePage: React.FC = () => {
         publicProfile: userProfile.public_profile || true,
         showActivity: userProfile.show_activity || true,
       });
+      
+      // Load follow stats for the profile being viewed
+      if (!isOwn) {
+        await loadFollowStats(targetUserId);
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -260,10 +298,136 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // If viewing someone else's profile, show their profile view
+  if (!isOwnProfile) {
+    const stats = followStats[profileUserId!] || { followerCount: 0, followingCount: 0, isFollowing: false };
+    
+    return (
+      <div className="min-h-screen bg-space-dark pt-20">
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto">
+            {/* Profile Header */}
+            <div className="bg-space-base/90 backdrop-blur-sm rounded-2xl p-8 border border-space-light/20 shadow-cosmic mb-8">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                {/* Avatar */}
+                <div className="relative">
+                  <img
+                    src={profileUser?.avatar_url || 'https://via.placeholder.com/120'}
+                    alt={profileUser?.username}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-primary-500"
+                  />
+                </div>
+                
+                {/* Profile Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <h1 className="text-3xl font-display font-bold text-white mb-2">
+                    {profileUser?.username || 'Unknown User'}
+                  </h1>
+                  
+                  {profileUser?.bio && (
+                    <p className="text-gray-300 mb-4 max-w-2xl">
+                      {profileUser.bio}
+                    </p>
+                  )}
+                  
+                  {/* Stats */}
+                  <div className="flex justify-center md:justify-start gap-8 mb-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-display font-bold text-white">
+                        {stats.followerCount}
+                      </div>
+                      <div className="text-sm text-gray-400">Followers</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-display font-bold text-white">
+                        {stats.followingCount}
+                      </div>
+                      <div className="text-sm text-gray-400">Following</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-display font-bold text-white">
+                        {new Date(profileUser?.created_at).getFullYear()}
+                      </div>
+                      <div className="text-sm text-gray-400">Joined</div>
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                    <FollowButton
+                      userId={profileUserId!}
+                      isFollowing={stats.isFollowing}
+                      onToggleFollow={toggleFollow}
+                      size="lg"
+                    />
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      leftIcon={<MessageCircle size={18} />}
+                      onClick={() => navigate(`/messages?user=${profileUserId}`)}
+                    >
+                      Message
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* User's Content/Activity could go here */}
+            <div className="bg-space-base/90 backdrop-blur-sm rounded-2xl p-8 border border-space-light/20 shadow-cosmic">
+              <h2 className="text-2xl font-display font-semibold text-white mb-6">
+                Recent Activity
+              </h2>
+              <div className="text-center py-12">
+                <Users size={48} className="mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-400">
+                  No recent activity to display
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Own profile view (existing settings interface)
   return (
     <div className="min-h-screen bg-space-dark pt-20">
+      {/* User Search Modal */}
+      <UserSearchModal
+        isOpen={showUserSearch}
+        onClose={() => setShowUserSearch(false)}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchResults={searchResults}
+        searchLoading={searchLoading}
+        onFollowToggle={toggleFollow}
+        currentUserId={currentUser?.id}
+      />
+      
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
+          {/* Header with Search */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-white mb-2">
+                Profile Settings
+              </h1>
+              <p className="text-gray-400">
+                Manage your account settings and preferences
+              </p>
+            </div>
+            
+            <Button
+              variant="primary"
+              leftIcon={<Search size={18} />}
+              onClick={() => setShowUserSearch(true)}
+            >
+              Find Users
+            </Button>
+          </div>
+          
           <div className="bg-space-base/90 backdrop-blur-sm rounded-2xl p-8 border border-space-light/20 shadow-cosmic">
             <div className="flex flex-col md:flex-row gap-8">
               {/* Sidebar Navigation */}
@@ -309,6 +473,16 @@ const ProfilePage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
+                  className="w-full mb-4"
+                  leftIcon={<Users size={18} />}
+                  onClick={() => setShowUserSearch(true)}
+                >
+                  Find Users
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="w-full"
                   leftIcon={<LogOut size={18} />}
                   onClick={handleSignOut}
@@ -337,7 +511,19 @@ const ProfilePage: React.FC = () => {
                 {/* Profile Tab */}
                 {activeTab === 'profile' && (
                   <form onSubmit={handleUpdateProfile} className="space-y-6">
-                    <h2 className="text-2xl font-display font-semibold text-white">Profile Settings</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-display font-semibold text-white">Profile Settings</h2>
+                      <div className="flex items-center gap-4 text-sm text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <Users size={16} />
+                          <span>{followStats[currentUser?.id]?.followerCount || 0} followers</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <UserPlus size={16} />
+                          <span>{followStats[currentUser?.id]?.followingCount || 0} following</span>
+                        </div>
+                      </div>
+                    </div>
                     
                     {/* Avatar Upload */}
                     <div className="flex items-center space-x-4">
@@ -438,7 +624,13 @@ const ProfilePage: React.FC = () => {
                 {/* Security Tab */}
                 {activeTab === 'security' && (
                   <form onSubmit={handleUpdatePassword} className="space-y-6">
-                    <h2 className="text-2xl font-display font-semibold text-white">Security Settings</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-display font-semibold text-white">Security Settings</h2>
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <Calendar size={16} />
+                        <span>Joined {new Date(profileUser?.created_at || currentUser?.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                     
                     {/* Current Password */}
                     <div>
@@ -514,7 +706,16 @@ const ProfilePage: React.FC = () => {
                 {/* Preferences Tab */}
                 {activeTab === 'preferences' && (
                   <form onSubmit={handleUpdatePreferences} className="space-y-6">
-                    <h2 className="text-2xl font-display font-semibold text-white">Preferences</h2>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-2xl font-display font-semibent text-white">Preferences</h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<SettingsIcon size={16} />}
+                      >
+                        Advanced
+                      </Button>
+                    </div>
                     
                     <div className="space-y-4">
                       <label className="flex items-center justify-between">
