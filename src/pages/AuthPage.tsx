@@ -64,21 +64,25 @@ const AuthPage: React.FC = () => {
     
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
         if (error) {
+          console.error('Supabase auth error:', error);
           if (error.message === 'Email not confirmed') {
             throw new Error('Please check your email for a confirmation link to activate your account.');
+          } else if (error.message.includes('fetch')) {
+            throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
           }
           throw error;
         }
         
+        console.log('Sign in successful:', data);
         navigate(from, { replace: true });
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -89,14 +93,29 @@ const AuthPage: React.FC = () => {
           },
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase signup error:', error);
+          if (error.message.includes('fetch')) {
+            throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
+          }
+          throw error;
+        }
         
+        console.log('Sign up successful:', data);
         setIsLogin(true);
         setSuccess('Account created successfully! Please check your email to confirm your account before signing in.');
       }
     } catch (err) {
+      console.error('Authentication error:', err);
       if (err instanceof Error) {
-        setError(err.message);
+        // Provide more user-friendly error messages
+        if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+          setError('Unable to connect to the server. Please check your internet connection and try again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setIsLoading(false);

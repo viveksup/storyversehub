@@ -4,8 +4,23 @@ import { v4 as uuidv4 } from 'uuid';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Debug logging for environment variables
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key exists:', !!supabaseAnonKey);
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing environment variables:', {
+    VITE_SUPABASE_URL: !!supabaseUrl,
+    VITE_SUPABASE_ANON_KEY: !!supabaseAnonKey
+  });
+  throw new Error('Missing Supabase environment variables. Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set correctly.');
+}
+
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  throw new Error(`Invalid Supabase URL format: ${supabaseUrl}. Please ensure it follows the format: https://your-project-ref.supabase.co`);
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -13,6 +28,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     params: {
       eventsPerSecond: 10
     }
+  },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
 });
 
