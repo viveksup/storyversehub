@@ -79,7 +79,7 @@ export const useStories = (filters: StoryFilters = {}) => {
           author:profiles!stories_author_id_fkey(id, username, avatar_url),
           category:story_categories!stories_category_id_fkey(id, name, slug, icon, color),
           tags:story_tags(tag),
-          analytics:story_analytics(*)
+          analytics:story_analytics!story_analytics_story_id_fkey(views_count, likes_count, bookmarks_count, comments_count, shares_count, reading_sessions_count, average_reading_time, completion_rate)
         `, { count: 'exact' });
 
       // Apply filters
@@ -114,11 +114,7 @@ export const useStories = (filters: StoryFilters = {}) => {
       const sortBy = filters.sort_by || 'published_at';
       const sortOrder = filters.sort_order || 'desc';
       
-      if (sortBy === 'views_count' || sortBy === 'likes_count') {
-        query = query.order(`analytics.${sortBy}`, { ascending: sortOrder === 'asc' });
-      } else {
-        query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-      }
+      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
       // Apply pagination
       const limit = filters.limit || 20;
@@ -134,7 +130,7 @@ export const useStories = (filters: StoryFilters = {}) => {
       const transformedStories: Story[] = (data || []).map(story => ({
         ...story,
         tags: story.tags?.map((t: any) => t.tag) || [],
-        analytics: story.analytics?.[0] || {
+        analytics: story.analytics || {
           views_count: 0,
           likes_count: 0,
           bookmarks_count: 0,
@@ -259,7 +255,7 @@ export const useStory = (id: string) => {
           const transformedStory: Story = {
             ...data,
             tags: data.tags?.map((t: any) => t.tag) || [],
-            analytics: data.analytics?.[0] || {
+            analytics: data.analytics || {
               views_count: 0,
               likes_count: 0,
               bookmarks_count: 0,

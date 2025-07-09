@@ -84,7 +84,7 @@ export const useRealtimeUserData = (userId: string | undefined) => {
         .from('rankings')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (readingHistory) {
         const stats = calculateUserStats(readingHistory, rankings);
