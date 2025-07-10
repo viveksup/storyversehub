@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   BookOpen, Search, Bell, Menu, X, User, Settings, 
-  LogOut, ChevronDown, Sparkles, Moon, Sun, MessageCircle
+  LogOut, ChevronDown, Sparkles, Moon, Sun, MessageCircle, Users
 } from 'lucide-react';
 import Button from '../ui/Button';
 import MessageNotifications from '../messaging/MessageNotifications';

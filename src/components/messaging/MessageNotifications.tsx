@@ -51,11 +51,10 @@ const MessageNotifications: React.FC<MessageNotificationsProps> = ({
         .from('message_notifications')
         .select(`
           *,
-          message:messages(
+          message:messages!message_notifications_message_id_fkey(
             id,
             content,
-            sender:profiles!messages_sender_id_fkey(id, username, avatar_url),
-            conversation:conversations!messages_conversation_id_fkey(id)
+            sender:profiles!messages_sender_id_fkey(id, username, avatar_url)
           )
         `)
         .eq('user_id', userId)
@@ -178,8 +177,9 @@ const MessageNotifications: React.FC<MessageNotificationsProps> = ({
   };
 
   const handleNotificationClick = (notification: MessageNotification) => {
-    if (notification.message && onNotificationClick) {
-      onNotificationClick(notification.message.conversation.id);
+    if (notification.message && onNotificationClick && notification.message.id) {
+      // For now, use message ID as conversation ID until we have proper conversation support
+      onNotificationClick(notification.message.id);
       markAsRead(notification.id);
       setShowDropdown(false);
     }
