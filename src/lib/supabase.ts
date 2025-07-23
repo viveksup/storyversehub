@@ -116,17 +116,6 @@ const createEnhancedClient = () => {
 
 // Export the enhanced client as the default export
 export default createEnhancedClient();
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  },
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true
-  }
-});
 
 // Profile management functions
 export const updateProfile = async (userId: string, updates: any) => {
