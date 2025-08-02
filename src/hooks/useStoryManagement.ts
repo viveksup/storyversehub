@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface StoryDraft {
   id: string;
@@ -38,8 +37,11 @@ export const useStoryManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Generate ID if not provided
+      const draftId = draftData.id || crypto.randomUUID();
+
       const draftPayload = {
-        id: draftData.id || uuidv4(),
+        id: draftId,
         author_id: user.id,
         title: draftData.title || 'Untitled Story',
         content: draftData.content || '',
@@ -86,10 +88,13 @@ export const useStoryManagement = () => {
         });
 
         if (error) throw error;
-        return { data: { id: data }, error: null };
+        return { data: { id: data, slug: 'published-story' }, error: null };
       } else if (storyData) {
         // Create and publish new story directly
-        const slug = await generateSlug(storyData.title || 'Untitled Story');
+        const { data: slugData } = await supabase.rpc('generate_story_slug', {
+          title_text: storyData.title || 'Untitled Story'
+        });
+        const slug = slugData || 'untitled-story';
         
         const storyPayload = {
           title: storyData.title || 'Untitled Story',
@@ -150,7 +155,7 @@ export const useStoryManagement = () => {
 
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -326,12 +331,4 @@ export const useStoryManagement = () => {
     deleteStory,
     updateStory
   };
-};
-
-// Helper function to generate slug
-const generateSlug = async (title: string): Promise<string> => {
-  const { data } = await supabase.rpc('generate_story_slug', {
-    title_text: title
-  });
-  return data || 'untitled-story';
 };

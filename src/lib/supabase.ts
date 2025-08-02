@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -142,7 +141,7 @@ export const updateProfile = async (userId: string, updates: any) => {
 export const uploadFile = async (bucket: string, userId: string, file: File) => {
   try {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${uuidv4()}.${fileExt}`;
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -202,12 +201,11 @@ export const subscribeToContent = (userId: string, callback: (payload: any) => v
 export const saveContentDraft = async (userId: string, content: any) => {
   try {
     const { data, error } = await supabase
-      .from('content')
+      .from('story_drafts')
       .upsert({
-        id: content.id || uuidv4(),
+        id: content.id || crypto.randomUUID(),
         author_id: userId,
         ...content,
-        is_published: false,
         updated_at: new Date().toISOString()
       })
       .select()

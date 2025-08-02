@@ -13,7 +13,8 @@ const DraftsList: React.FC = () => {
   }, []);
 
   const loadDrafts = async () => {
-    const { data } = await getDrafts();
+    const result = await getDrafts();
+    const { data } = result;
     if (data) {
       setDrafts(data);
     }

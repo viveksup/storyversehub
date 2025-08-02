@@ -194,7 +194,7 @@ const CreatePage: React.FC = () => {
     if (result.data) {
       setSuccess('Story published successfully!');
       setTimeout(() => {
-        navigate(`/story/${result.data.id}`);
+        navigate(`/story/${result.data.slug || result.data.id}`);
       }, 1500);
     }
   };
