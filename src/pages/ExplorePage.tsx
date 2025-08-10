@@ -42,7 +42,7 @@ const ExplorePage: React.FC = () => {
     if (!user) return;
     
     try {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
@@ -50,8 +50,9 @@ const ExplorePage: React.FC = () => {
           interaction_type: 'like'
         });
       
-      // Update local state immediately for better UX
-      // The real-time subscription will handle the actual update
+      if (error) {
+        console.error('Error liking story:', error);
+      }
     } catch (error) {
       console.error('Error liking story:', error);
     }
@@ -61,7 +62,7 @@ const ExplorePage: React.FC = () => {
     if (!user) return;
     
     try {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
@@ -69,6 +70,9 @@ const ExplorePage: React.FC = () => {
           interaction_type: 'bookmark'
         });
       
+      if (error) {
+        console.error('Error bookmarking story:', error);
+      }
     } catch (error) {
       console.error('Error bookmarking story:', error);
     }
@@ -88,13 +92,17 @@ const ExplorePage: React.FC = () => {
         });
 
         // Track share interaction
-        await supabase
+        const { error: shareError } = await supabase
           .from('user_story_interactions')
           .upsert({
             user_id: user.id,
             story_id: storyId,
             interaction_type: 'share'
           });
+          
+        if (shareError) {
+          console.error('Error tracking share:', shareError);
+        }
       }
     } catch (error) {
       console.error('Error sharing story:', error);

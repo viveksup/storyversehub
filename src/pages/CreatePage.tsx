@@ -114,6 +114,11 @@ const CreatePage: React.FC = () => {
   const handleSaveDraft = async (isAutoSave = false) => {
     if (!user) return;
 
+    if (!isAutoSave) {
+      setError('');
+      setSuccess('');
+    }
+
     const draftData: Partial<StoryDraft> = {
       id: currentDraft?.id,
       title: title || 'Untitled Story',
@@ -155,15 +160,18 @@ const CreatePage: React.FC = () => {
     if (!user) return;
 
     if (!title.trim()) {
+      setSuccess('');
       setError('Please enter a title for your story');
       return;
     }
 
     if (!content.trim()) {
+      setSuccess('');
       setError('Please write some content for your story');
       return;
     }
 
+    setError('');
     let result;
 
     if (currentDraft?.id) {
@@ -190,10 +198,10 @@ const CreatePage: React.FC = () => {
     }
 
     if (result.data) {
-      setSuccess('Story published successfully!');
+      setSuccess(`Story "${result.data.title}" published successfully! Redirecting...`);
       setTimeout(() => {
         navigate(`/story/${result.data.slug || result.data.id}`);
-      }, 1500);
+      }, 2000);
     }
   };
 

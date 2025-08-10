@@ -83,25 +83,107 @@ export const useStoryManagement = () => {
 
       if (draftId) {
         // Publish existing draft
-        const { data: storyId, error } = await supabase.rpc('publish_draft', {
+        const { data, error } = await supabase.rpc('publish_draft', {
           draft_uuid: draftId
         });
 
         if (error) throw error;
         
         // Get the published story details
-        const { data: story, error: storyError } = await supabase
+        const { data: storyData, error: storyError } = await supabase
           .from('stories')
-          .select('id, slug')
-          .eq('id', storyId)
+          .select('id, slug, title')
+          .eq('id', data)
           .single();
           
         if (storyError) throw storyError;
         
-        return { data: story, error: null };
+        return { data: storyData, error: null };
       } else if (storyData) {
         // Create and publish new story directly
-        const { data: slug, error: slugError } = await supabase.rpc('generate_story_slug', {
+        const slug = await generateSlug(storyData.title || 'Untitled Story');
+        
+        const storyPayload = {
+          title: storyData.title || 'Untitled Story',
+          slug,
+          excerpt: storyData.excerpt,
+          content: storyData.content || '',
+          cover_image_url: storyData.cover_image_url,
+          author_id: user.id,
+          category_id: storyData.category_id,
+          status: 'published',
+          visibility: 'public',
+          content_rating: storyData.content_rating || 'general',
+          language: storyData.language || 'en',
+          published_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+          .from('stories')
+          .insert(storyPayload)
+          .select('id, slug, title')
+          .single();
+
+        if (error) throw error;
+
+        // Add tags if provided
+        if (storyData.tags && storyData.tags.length > 0) {
+          const tagInserts = storyData.tags.map(tag => ({
+            story_id: data.id,
+            tag: tag.trim()
+          }));
+
+          const { error: tagsError } = await supabase
+            .from('story_tags')
+            .insert(tagInserts);
+            
+          if (tagsError) {
+            console.warn('Failed to add tags:', tagsError);
+          }
+        }
+
+        return { data, error: null };
+      } else {
+        throw new Error('Either draftId or storyData must be provided');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to publish story';
+      setError(errorMessage);
+      return { data: null, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Helper function to generate slug
+  const generateSlug = async (title: string): Promise<string> => {
+    const baseSlug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .trim();
+    
+    let finalSlug = baseSlug || 'untitled-story';
+    let counter = 0;
+    
+    // Check for uniqueness
+    while (true) {
+      const { data } = await supabase
+        .from('stories')
+        .select('id')
+        .eq('slug', finalSlug)
+        .single();
+        
+      if (!data) break;
+      
+      counter++;
+      finalSlug = `${baseSlug}-${counter}`;
+    }
+    
+    return finalSlug;
+  };
+
+  const uploadMedia = useCallback(async (file: File, draftId?: string, storyId?: string) => {
           title_text: storyData.title || 'Untitled Story'
         });
         

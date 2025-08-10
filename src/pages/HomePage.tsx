@@ -53,13 +53,17 @@ const HomePage: React.FC = () => {
     if (!user) return;
     
     try {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'like'
         });
+        
+      if (error) {
+        console.error('Error liking story:', error);
+      }
     } catch (error) {
       console.error('Error liking story:', error);
     }
@@ -69,13 +73,17 @@ const HomePage: React.FC = () => {
     if (!user) return;
     
     try {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'bookmark'
         });
+        
+      if (error) {
+        console.error('Error bookmarking story:', error);
+      }
     } catch (error) {
       console.error('Error bookmarking story:', error);
     }
@@ -101,6 +109,10 @@ const HomePage: React.FC = () => {
             story_id: storyId,
             interaction_type: 'share'
           });
+          
+        if (shareError) {
+          console.error('Error tracking share:', shareError);
+        }
       }
     } catch (error) {
       console.error('Error sharing story:', error);

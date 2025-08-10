@@ -144,7 +144,7 @@ export const useStories = (filters: StoryFilters = {}) => {
       // Transform data to match our interface
       const transformedStories: Story[] = (data || []).map(story => ({
         ...story,
-        tags: story.tags?.map((t: any) => t.tag) || [],
+        tags: Array.isArray(story.tags) ? story.tags.map((t: any) => t.tag || t) : [],
         analytics: story.analytics?.[0] || {
           views_count: 0,
           likes_count: 0,
@@ -157,6 +157,8 @@ export const useStories = (filters: StoryFilters = {}) => {
         }
       }));
 
+      console.log('Fetched stories:', transformedStories.length, 'stories');
+      
       if (reset) {
         setStories(transformedStories);
       } else {
@@ -269,7 +271,7 @@ export const useStory = (id: string) => {
         if (data) {
           const transformedStory: Story = {
             ...data,
-            tags: data.tags?.map((t: any) => t.tag) || [],
+            tags: Array.isArray(data.tags) ? data.tags.map((t: any) => t.tag || t) : [],
             analytics: data.analytics?.[0] || {
               views_count: 0,
               likes_count: 0,

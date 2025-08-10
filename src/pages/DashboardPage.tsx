@@ -82,27 +82,33 @@ const DashboardPage: React.FC = () => {
 
   const handleLikeStory = async (storyId: string) => {
     if (user?.id) {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'like'
         });
-      await logUserActivity('story_liked', storyId);
+        
+      if (!error) {
+        await logUserActivity('story_liked', storyId);
+      }
     }
   };
 
   const handleBookmarkStory = async (storyId: string) => {
     if (user?.id) {
-      await supabase
+      const { error } = await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'bookmark'
         });
-      await logUserActivity('story_bookmarked', storyId);
+        
+      if (!error) {
+        await logUserActivity('story_bookmarked', storyId);
+      }
     }
   };
 

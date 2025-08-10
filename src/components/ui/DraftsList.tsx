@@ -27,6 +27,7 @@ const DraftsList: React.FC = () => {
       setDrafts(data || []);
     } catch (error) {
       console.error('Error loading drafts:', error);
+      setDrafts([]); // Set empty array on error
     }
   };
 
