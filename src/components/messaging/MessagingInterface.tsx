@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Send, Paperclip, Smile, MoreVertical, Search, 
+  Send, Paperclip, Smile, Search, 
   Phone, Video, Info, ArrowLeft, Check, CheckCheck,
-  Image, File, X, Reply, Edit, Trash2
+  File, X, Reply
 } from 'lucide-react';
 import Button from '../ui/Button';
 import { useMessaging, Conversation, Message } from '../../hooks/useMessaging';
@@ -26,7 +26,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     loading,
     sendMessage,
     loadMessages,
-    createConversation,
     updatePresence
   } = useMessaging(userId);
 
@@ -37,12 +36,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isTyping, setIsTyping] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -132,17 +130,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
     }
   };
 
-  const formatTime = (timestamp: string) => {
+  const formatTime = (timestamp?: string) => {
+    if (!timestamp) return '';
     return new Date(timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
       minute: '2-digit' 
     });
   };
 
-  const getPresenceStatus = (userId: string) => {
+  const getPresenceStatus = (userId?: string) => {
+    if (!userId) return 'offline';
     const presence = userPresence[userId];
-    if (!presence) return 'offline';
-    return presence.status;
+    return presence?.status || 'offline';
   };
 
   const getPresenceColor = (status: string) => {
@@ -216,18 +215,18 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   <div className="relative">
                     <img
                       src={conversation.other_participant?.avatar_url || 'https://via.placeholder.com/40'}
-                      alt={conversation.other_participant?.username}
+                      alt={conversation.other_participant?.username || 'User'}
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-space-base ${
-                      getPresenceColor(getPresenceStatus(conversation.other_participant?.id || ''))
+                      getPresenceColor(getPresenceStatus(conversation.other_participant?.id))
                     }`}></div>
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium text-white truncate">
-                        {conversation.other_participant?.username}
+                        {conversation.other_participant?.username || 'Unknown User'}
                       </h3>
                       <span className="text-xs text-gray-400">
                         {formatTime(conversation.last_message_at)}
@@ -271,20 +270,20 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
               <div className="relative">
                 <img
                   src={currentConversation?.other_participant?.avatar_url || 'https://via.placeholder.com/40'}
-                  alt={currentConversation?.other_participant?.username}
+                  alt={currentConversation?.other_participant?.username || 'User'}
                   className="w-10 h-10 rounded-full object-cover"
                 />
                 <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-space-base ${
-                  getPresenceColor(getPresenceStatus(currentConversation?.other_participant?.id || ''))
+                  getPresenceColor(getPresenceStatus(currentConversation?.other_participant?.id))
                 }`}></div>
               </div>
               
               <div>
                 <h3 className="font-medium text-white">
-                  {currentConversation?.other_participant?.username}
+                  {currentConversation?.other_participant?.username || 'Unknown User'}
                 </h3>
                 <p className="text-xs text-gray-400">
-                  {getPresenceStatus(currentConversation?.other_participant?.id || '')}
+                  {getPresenceStatus(currentConversation?.other_participant?.id)}
                 </p>
               </div>
             </div>
@@ -316,10 +315,10 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                     {message.reply_to && (
                       <div className="mb-2 p-2 bg-space-light/20 rounded-lg border-l-2 border-primary-500">
                         <p className="text-xs text-gray-400">
-                          Replying to {message.reply_to.sender?.username}
+                          Replying to {message.reply_to.sender?.username || 'User'}
                         </p>
                         <p className="text-sm text-gray-300 truncate">
-                          {message.reply_to.content}
+                          {message.reply_to.content || ''}
                         </p>
                       </div>
                     )}
@@ -335,11 +334,11 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       )}
                       
-                      {message.attachments && message.attachments.length > 0 && (
+                      {Array.isArray(message.attachments) && message.attachments.length > 0 && (
                         <div className="mt-2 space-y-2">
                           {message.attachments.map((attachment) => (
                             <div key={attachment.id} className="flex items-center space-x-2">
-                              {attachment.file_type.startsWith('image/') ? (
+                              {attachment.file_type?.startsWith('image/') ? (
                                 <img
                                   src={attachment.file_url}
                                   alt={attachment.file_name}
@@ -372,7 +371,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   {!isOwn && (
                     <img
                       src={message.sender?.avatar_url || 'https://via.placeholder.com/32'}
-                      alt={message.sender?.username}
+                      alt={message.sender?.username || 'User'}
                       className="w-8 h-8 rounded-full object-cover order-1 mr-2"
                     />
                   )}
@@ -389,7 +388,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 <div className="flex items-center space-x-2">
                   <Reply size={16} className="text-primary-400" />
                   <span className="text-sm text-gray-400">
-                    Replying to {replyingTo.sender?.username}
+                    Replying to {replyingTo.sender?.username || 'User'}
                   </span>
                 </div>
                 <Button
@@ -401,7 +400,7 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                 </Button>
               </div>
               <p className="text-sm text-gray-300 truncate mt-1">
-                {replyingTo.content}
+                {replyingTo.content || ''}
               </p>
             </div>
           )}
@@ -457,14 +456,6 @@ const MessagingInterface: React.FC<MessagingInterfaceProps> = ({
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Paperclip size={18} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                >
-                  <Smile size={18} />
                 </Button>
                 
                 <Button
