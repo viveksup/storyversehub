@@ -10,8 +10,8 @@ const createSupabaseClient = () => {
   const url = supabaseUrl || 'https://placeholder.supabase.co';
   const key = supabaseAnonKey || 'placeholder-key';
   
-  // Only validate if we have real values
-  if (supabaseUrl && supabaseAnonKey) {
+  // Skip validation for placeholder values
+  if (supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder') && !supabaseUrl.includes('your_supabase_project_url_here')) {
     try {
       new URL(supabaseUrl);
     } catch (error) {
@@ -39,7 +39,9 @@ export const supabase = createSupabaseClient();
 export const isSupabaseConfigured = () => {
   return !!(supabaseUrl && supabaseAnonKey && 
     supabaseUrl !== 'https://placeholder.supabase.co' && 
-    supabaseAnonKey !== 'placeholder-key');
+    supabaseAnonKey !== 'placeholder-key' &&
+    !supabaseUrl.includes('your_supabase_project_url_here') &&
+    !supabaseAnonKey.includes('your_supabase_anon_key_here'));
 };
 
 // Enhanced client with error handling
