@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export function useStoryManagement() { ... }
+export function useStoryManagement() {
   const [stories, setStories] = useState([]);
 
   const addStory = (story) => setStories(prev => [...prev, story]);
