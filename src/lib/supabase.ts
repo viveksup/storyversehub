@@ -5,16 +5,22 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create a fallback client with dummy values if environment variables are missing
 const createSupabaseClient = () => {
-  const url = supabaseUrl || 'https://placeholder.supabase.co';
-  const key = supabaseAnonKey || 'placeholder-key';
+  // Only validate if real values are provided
+  const hasValidUrl = supabaseUrl && 
+    !supabaseUrl.includes('placeholder') && 
+    !supabaseUrl.includes('your_supabase_project_url_here') &&
+    supabaseUrl.startsWith('https://');
 
-  // Validate only if real values are provided
-  if (
-    supabaseUrl &&
-    supabaseAnonKey &&
-    !supabaseUrl.includes('placeholder') &&
-    !supabaseUrl.includes('your_supabase_project_url_here')
-  ) {
+  const hasValidKey = supabaseAnonKey && 
+    !supabaseAnonKey.includes('placeholder') && 
+    !supabaseAnonKey.includes('your_supabase_anon_key_here');
+
+  // Use valid values if available, otherwise use safe defaults
+  const url = hasValidUrl ? supabaseUrl : 'https://placeholder.supabase.co';
+  const key = hasValidKey ? supabaseAnonKey : 'placeholder-key';
+
+  // Only validate URL format if we have what appears to be a real URL
+  if (hasValidUrl && hasValidKey) {
     try {
       new URL(supabaseUrl);
     } catch (error) {
