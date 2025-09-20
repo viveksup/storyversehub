@@ -79,7 +79,7 @@ export const useStories = (filters: StoryFilters = {}) => {
           author:profiles!stories_author_id_fkey(id, username, avatar_url),
           category:story_categories!stories_category_id_fkey(id, name, slug, icon, color),
           tags:story_tags(tag),
-          analytics:story_analytics!story_analytics_story_id_fkey(views_count, likes_count, bookmarks_count, comments_count, shares_count, reading_sessions_count, average_reading_time, completion_rate)
+          analytics:story_analytics(views_count, likes_count, bookmarks_count, comments_count, shares_count, reading_sessions_count, average_reading_time, completion_rate)
         `, { count: 'exact' });
 
       // Apply filters
@@ -91,7 +91,16 @@ export const useStories = (filters: StoryFilters = {}) => {
       }
 
       if (filters.category) {
-        query = query.eq('category.slug', filters.category);
+        // Join with category table to filter by slug
+        const { data: categoryData } = await supabase
+          .from('story_categories')
+          .select('id')
+          .eq('slug', filters.category)
+          .single();
+          
+        if (categoryData) {
+          query = query.eq('category_id', categoryData.id);
+        }
       }
 
       if (filters.author) {
@@ -107,14 +116,20 @@ export const useStories = (filters: StoryFilters = {}) => {
       }
 
       if (filters.search) {
-        query = query.textSearch('title,excerpt,content', filters.search);
+        query = query.or(`title.ilike.%${filters.search}%,excerpt.ilike.%${filters.search}%,content.ilike.%${filters.search}%`);
       }
 
       // Apply sorting
       const sortBy = filters.sort_by || 'published_at';
       const sortOrder = filters.sort_order || 'desc';
       
-      query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+      // Handle analytics-based sorting
+      if (sortBy === 'views_count' || sortBy === 'likes_count') {
+        // For analytics-based sorting, we need to join with analytics table
+        query = query.order('published_at', { ascending: false }); // Fallback to date sorting
+      } else {
+        query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+      }
 
       // Apply pagination
       const limit = filters.limit || 20;
@@ -130,7 +145,7 @@ export const useStories = (filters: StoryFilters = {}) => {
       const transformedStories: Story[] = (data || []).map(story => ({
         ...story,
         tags: story.tags?.map((t: any) => t.tag) || [],
-        analytics: story.analytics || {
+        analytics: story.analytics?.[0] || {
           views_count: 0,
           likes_count: 0,
           bookmarks_count: 0,
@@ -246,7 +261,7 @@ export const useStory = (id: string) => {
             tags:story_tags(tag),
             analytics:story_analytics(*)
           `)
-          .eq('id', id)
+          .or(`id.eq.${id},slug.eq.${id}`)
           .single();
 
         if (fetchError) throw fetchError;
@@ -255,7 +270,7 @@ export const useStory = (id: string) => {
           const transformedStory: Story = {
             ...data,
             tags: data.tags?.map((t: any) => t.tag) || [],
-            analytics: data.analytics || {
+            analytics: data.analytics?.[0] || {
               views_count: 0,
               likes_count: 0,
               bookmarks_count: 0,
@@ -276,7 +291,7 @@ export const useStory = (id: string) => {
               .from('user_story_interactions')
               .upsert({
                 user_id: user.id,
-                story_id: id,
+                story_id: data.id,
                 interaction_type: 'view'
               });
           }

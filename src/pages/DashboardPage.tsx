@@ -8,6 +8,7 @@ import {
 import StoriesGrid from '../components/stories/StoriesGrid';
 import CategoryGrid from '../components/stories/CategoryGrid';
 import Button from '../components/ui/Button';
+import DraftsList from '../components/ui/DraftsList';
 import RealtimeStats from '../components/dashboard/RealtimeStats';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import { supabase } from '../lib/supabase';
@@ -21,19 +22,19 @@ const DashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
 
   // Fetch user's recent stories and recommendations
-  const { stories: recentStories, loading: recentLoading } = useStories({
+  const { stories: recentStories, loading: recentLoading, refresh: refreshRecent } = useStories({
     sort_by: 'published_at',
     sort_order: 'desc',
     limit: 4
   });
 
-  const { stories: featuredStories, loading: featuredLoading } = useStories({
+  const { stories: featuredStories, loading: featuredLoading, refresh: refreshFeatured } = useStories({
     is_featured: true,
     limit: 4
   });
 
-  const { stories: popularStories, loading: popularLoading } = useStories({
-    sort_by: 'views_count',
+  const { stories: popularStories, loading: popularLoading, refresh: refreshPopular } = useStories({
+    sort_by: 'published_at', // Fallback to date sorting
     sort_order: 'desc',
     limit: 4
   });
@@ -355,14 +356,14 @@ const DashboardPage: React.FC = () => {
                     Create
                   </Button>
                 </Link>
-                <Link to="/profile">
+                <Link to="/create">
                   <Button 
                     variant="secondary"
                     size="sm"
                     leftIcon={<BookText size={16} />}
                     className="w-full"
                   >
-                    My Stories
+                    My Drafts
                   </Button>
                 </Link>
                 <Link to="/bookmarks">
@@ -386,6 +387,11 @@ const DashboardPage: React.FC = () => {
                   </Button>
                 </Link>
               </div>
+            </div>
+
+            {/* My Drafts */}
+            <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-6 border border-space-light/20">
+              <DraftsList />
             </div>
 
             {/* Reading Goals with Real-time Updates */}

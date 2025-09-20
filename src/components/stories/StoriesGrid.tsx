@@ -73,6 +73,20 @@ const StoriesGrid: React.FC<StoriesGridProps> = ({
             onShare={onShare}
           />
         ))}
+        
+        {/* Show loading placeholders while loading */}
+        {loading && stories.length === 0 && (
+          Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="w-64 h-80 bg-space-base/30 rounded-xl animate-pulse">
+              <div className="w-full h-48 bg-space-light/20 rounded-t-xl"></div>
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-space-light/20 rounded w-3/4"></div>
+                <div className="h-3 bg-space-light/20 rounded w-1/2"></div>
+                <div className="h-3 bg-space-light/20 rounded w-2/3"></div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Loading indicator */}

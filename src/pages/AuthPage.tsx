@@ -71,7 +71,9 @@ const AuthPage: React.FC = () => {
         
         if (error) {
           console.error('Supabase auth error:', error);
-          if (error.message === 'Email not confirmed') {
+          if (error.message.includes('Supabase is not configured')) {
+            throw new Error('Authentication service is not configured. Please check your environment variables.');
+          } else if (error.message === 'Email not confirmed') {
             throw new Error('Please check your email for a confirmation link to activate your account.');
           } else if (error.message.includes('fetch')) {
             throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
@@ -95,7 +97,9 @@ const AuthPage: React.FC = () => {
         
         if (error) {
           console.error('Supabase signup error:', error);
-          if (error.message.includes('fetch')) {
+          if (error.message.includes('Supabase is not configured')) {
+            throw new Error('Authentication service is not configured. Please check your environment variables.');
+          } else if (error.message.includes('fetch')) {
             throw new Error('Unable to connect to authentication service. Please check your internet connection and try again.');
           }
           throw error;
