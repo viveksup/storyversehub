@@ -83,34 +83,22 @@ export const useStoryManagement = () => {
 
       if (draftId) {
         // Publish existing draft
-        const { data: storyId, error } = await supabase.rpc('publish_draft', {
+        const { data, error } = await supabase.rpc('publish_draft', {
           draft_uuid: draftId
         });
 
         if (error) throw error;
-        
-        // Get the published story details
-        const { data: story, error: storyError } = await supabase
-          .from('stories')
-          .select('id, slug')
-          .eq('id', storyId)
-          .single();
-          
-        if (storyError) throw storyError;
-        
-        return { data: story, error: null };
+        return { data: { id: data, slug: 'published-story' }, error: null };
       } else if (storyData) {
         // Create and publish new story directly
-        const { data: slug, error: slugError } = await supabase.rpc('generate_story_slug', {
+        const { data: slugData } = await supabase.rpc('generate_story_slug', {
           title_text: storyData.title || 'Untitled Story'
         });
-        
-        if (slugError) throw slugError;
-        const finalSlug = slug || 'untitled-story';
+        const slug = slugData || 'untitled-story';
         
         const storyPayload = {
           title: storyData.title || 'Untitled Story',
-          slug: finalSlug,
+          slug,
           excerpt: storyData.excerpt,
           content: storyData.content || '',
           cover_image_url: storyData.cover_image_url,
@@ -120,6 +108,7 @@ export const useStoryManagement = () => {
           visibility: 'public',
           content_rating: storyData.content_rating || 'general',
           language: storyData.language || 'en',
+          metadata: storyData.metadata || {},
           published_at: new Date().toISOString()
         };
 

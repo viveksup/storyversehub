@@ -50,8 +50,8 @@ const ExplorePage: React.FC = () => {
           interaction_type: 'like'
         });
       
-      // Update local state immediately for better UX
-      // The real-time subscription will handle the actual update
+      // Refresh stories to update counts
+      refresh();
     } catch (error) {
       console.error('Error liking story:', error);
     }
@@ -69,6 +69,7 @@ const ExplorePage: React.FC = () => {
           interaction_type: 'bookmark'
         });
       
+      refresh();
     } catch (error) {
       console.error('Error bookmarking story:', error);
     }

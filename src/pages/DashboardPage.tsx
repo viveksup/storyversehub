@@ -22,19 +22,19 @@ const DashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
 
   // Fetch user's recent stories and recommendations
-  const { stories: recentStories, loading: recentLoading, refresh: refreshRecent } = useStories({
+  const { stories: recentStories, loading: recentLoading } = useStories({
     sort_by: 'published_at',
     sort_order: 'desc',
     limit: 4
   });
 
-  const { stories: featuredStories, loading: featuredLoading, refresh: refreshFeatured } = useStories({
+  const { stories: featuredStories, loading: featuredLoading } = useStories({
     is_featured: true,
     limit: 4
   });
 
-  const { stories: popularStories, loading: popularLoading, refresh: refreshPopular } = useStories({
-    sort_by: 'published_at', // Fallback to date sorting
+  const { stories: popularStories, loading: popularLoading } = useStories({
+    sort_by: 'views_count',
     sort_order: 'desc',
     limit: 4
   });

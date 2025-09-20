@@ -123,14 +123,15 @@ const CreatePage: React.FC = () => {
       tags,
       content_rating: contentRating,
       cover_image_url: coverImage || undefined,
-      language: 'en'
+      language: 'en',
+      metadata: {}
     };
 
     const { data, error } = await saveDraft(draftData);
 
     if (error) {
       if (!isAutoSave) {
-        setError(`Failed to save draft: ${error}`);
+        console.error('Save error:', error);
       }
       return;
     }
@@ -155,12 +156,12 @@ const CreatePage: React.FC = () => {
     if (!user) return;
 
     if (!title.trim()) {
-      setError('Please enter a title for your story');
+      alert('Please enter a title for your story');
       return;
     }
 
     if (!content.trim()) {
-      setError('Please write some content for your story');
+      alert('Please write some content for your story');
       return;
     }
 
@@ -179,13 +180,14 @@ const CreatePage: React.FC = () => {
         tags,
         content_rating: contentRating,
         cover_image_url: coverImage || undefined,
-        language: 'en'
+        language: 'en',
+        metadata: {}
       };
       result = await publishStory(undefined, storyData);
     }
 
     if (result.error) {
-      setError(`Failed to publish story: ${result.error}`);
+      console.error('Publish error:', result.error);
       return;
     }
 

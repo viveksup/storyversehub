@@ -13,20 +13,10 @@ const DraftsList: React.FC = () => {
   }, []);
 
   const loadDrafts = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('story_drafts')
-        .select('*')
-        .eq('author_id', user.id)
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      setDrafts(data || []);
-    } catch (error) {
-      console.error('Error loading drafts:', error);
+    const result = await getDrafts();
+    const { data } = result;
+    if (data) {
+      setDrafts(data);
     }
   };
 
