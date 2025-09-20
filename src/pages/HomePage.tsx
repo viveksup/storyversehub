@@ -18,20 +18,20 @@ const HomePage: React.FC = () => {
 
   // Fetch featured stories
   const { stories: featuredStories, loading: featuredLoading } = useStories({
-    is_featured: true,
+    content_type: 'story',
     limit: 6
   });
 
   // Fetch popular stories
   const { stories: popularStories, loading: popularLoading } = useStories({
-    sort_by: 'views_count',
+    sort_by: 'updated_at',
     sort_order: 'desc',
     limit: 6
   });
 
   // Fetch recent stories
   const { stories: recentStories, loading: recentLoading } = useStories({
-    sort_by: 'published_at',
+    sort_by: 'created_at',
     sort_order: 'desc',
     limit: 6
   });

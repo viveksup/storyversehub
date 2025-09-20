@@ -10,9 +10,8 @@ import { supabase } from '../lib/supabase';
 const ExplorePage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [contentRating, setContentRating] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'published_at' | 'views_count' | 'likes_count' | 'title'>('published_at');
+  const [selectedContentType, setSelectedContentType] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'updated_at' | 'title'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -20,9 +19,8 @@ const ExplorePage: React.FC = () => {
   // Build filters object
   const filters: StoryFilters = {
     search: searchQuery || undefined,
-    category: selectedCategory || undefined,
-    tags: selectedTags.length > 0 ? selectedTags : undefined,
-    content_rating: contentRating || undefined,
+    categories: selectedCategory ? [selectedCategory] : undefined,
+    content_type: selectedContentType as any || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
     limit: 20
@@ -42,12 +40,13 @@ const ExplorePage: React.FC = () => {
     if (!user) return;
     
     try {
+      // Track like in bookmarks table for now
       await supabase
-        .from('user_story_interactions')
+        .from('bookmarks')
         .upsert({
           user_id: user.id,
-          story_id: storyId,
-          interaction_type: 'like'
+          content_id: storyId,
+          content_type: 'story'
         });
       
       // Refresh stories to update counts
@@ -62,11 +61,11 @@ const ExplorePage: React.FC = () => {
     
     try {
       await supabase
-        .from('user_story_interactions')
+        .from('bookmarks')
         .upsert({
           user_id: user.id,
-          story_id: storyId,
-          interaction_type: 'bookmark'
+          content_id: storyId,
+          content_type: 'story'
         });
       
       refresh();
@@ -81,21 +80,14 @@ const ExplorePage: React.FC = () => {
     try {
       const story = stories.find(s => s.id === storyId);
       if (story) {
-        const shareUrl = `${window.location.origin}/story/${story.slug}`;
+        const shareUrl = `${window.location.origin}/story/${story.id}`;
         await navigator.share({
           title: story.title,
-          text: story.excerpt,
+          text: story.description,
           url: shareUrl
         });
 
-        // Track share interaction
-        await supabase
-          .from('user_story_interactions')
-          .upsert({
-            user_id: user.id,
-            story_id: storyId,
-            interaction_type: 'share'
-          });
+        // Could track share in user activities if needed
       }
     } catch (error) {
       console.error('Error sharing story:', error);
@@ -105,13 +97,12 @@ const ExplorePage: React.FC = () => {
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedCategory('');
-    setSelectedTags([]);
-    setContentRating('');
-    setSortBy('published_at');
+    setSelectedContentType('');
+    setSortBy('created_at');
     setSortOrder('desc');
   };
 
-  const hasActiveFilters = searchQuery || selectedCategory || selectedTags.length > 0 || contentRating;
+  const hasActiveFilters = searchQuery || selectedCategory || selectedContentType;
 
   return (
     <div className="min-h-screen bg-space-dark pt-20">
@@ -173,8 +164,7 @@ const ExplorePage: React.FC = () => {
                 className="bg-space-base border border-space-light/30 text-white rounded-lg py-3 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="published_at">Latest</option>
-                <option value="views_count">Most Viewed</option>
-                <option value="likes_count">Most Liked</option>
+                <option value="updated_at">Recently Updated</option>
                 <option value="title">Title A-Z</option>
               </select>
               
@@ -210,71 +200,47 @@ const ExplorePage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Category
                   </label>
-                  <select
+                  <input
+                    type="text"
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
+                    placeholder="Enter category name"
                     className="w-full bg-space-dark border border-space-light/30 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">All Categories</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.slug}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
-                {/* Content Rating Filter */}
+                {/* Content Type Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Content Rating
+                    Content Type
                   </label>
                   <select
-                    value={contentRating}
-                    onChange={(e) => setContentRating(e.target.value)}
+                    value={selectedContentType}
+                    onChange={(e) => setSelectedContentType(e.target.value)}
                     className="w-full bg-space-dark border border-space-light/30 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="">All Ratings</option>
-                    <option value="general">General</option>
-                    <option value="teen">Teen</option>
-                    <option value="mature">Mature</option>
-                    <option value="adult">Adult</option>
+                    <option value="">All Types</option>
+                    <option value="story">Story</option>
+                    <option value="comic">Comic</option>
+                    <option value="educational">Educational</option>
                   </select>
                 </div>
 
-                {/* Featured Stories Toggle */}
+                {/* Published Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Story Type
+                    Status
                   </label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={selectedTags.includes('featured') ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        if (selectedTags.includes('featured')) {
-                          setSelectedTags(prev => prev.filter(tag => tag !== 'featured'));
-                        } else {
-                          setSelectedTags(prev => [...prev, 'featured']);
-                        }
-                      }}
-                    >
-                      Featured
-                    </Button>
-                    <Button
-                      variant={selectedTags.includes('ai-generated') ? 'primary' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        if (selectedTags.includes('ai-generated')) {
-                          setSelectedTags(prev => prev.filter(tag => tag !== 'ai-generated'));
-                        } else {
-                          setSelectedTags(prev => [...prev, 'ai-generated']);
-                        }
-                      }}
-                    >
-                      AI Generated
-                    </Button>
-                  </div>
+                  <select
+                    value={filters.is_published === undefined ? 'all' : filters.is_published ? 'published' : 'draft'}
+                    onChange={(e) => {
+                      // This would need to be handled in the filters state
+                    }}
+                    className="w-full bg-space-dark border border-space-light/30 text-white rounded-lg py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="all">All Content</option>
+                    <option value="published">Published Only</option>
+                  </select>
                 </div>
               </div>
             </div>

@@ -4,57 +4,30 @@ import { supabase } from '../lib/supabase';
 export interface Story {
   id: string;
   title: string;
-  slug: string;
-  excerpt: string;
+  description: string;
   content: string;
-  cover_image_url: string;
+  cover_image: string;
   author_id: string;
   author?: {
     id: string;
     username: string;
     avatar_url: string;
   };
-  category_id: string;
-  category?: {
-    id: string;
-    name: string;
-    slug: string;
-    icon: string;
-    color: string;
-  };
-  status: 'draft' | 'published' | 'archived' | 'deleted';
-  visibility: 'public' | 'private' | 'unlisted';
-  is_featured: boolean;
-  is_ai_generated: boolean;
-  reading_time_minutes: number;
-  word_count: number;
-  language: string;
-  content_rating: 'general' | 'teen' | 'mature' | 'adult';
-  published_at: string;
+  content_type: 'story' | 'comic' | 'educational';
+  categories: string[];
+  pages: string[];
+  is_published: boolean;
   created_at: string;
   updated_at: string;
-  tags: string[];
-  analytics: {
-    views_count: number;
-    likes_count: number;
-    bookmarks_count: number;
-    comments_count: number;
-    shares_count: number;
-    reading_sessions_count: number;
-    average_reading_time: number;
-    completion_rate: number;
-  };
 }
 
 export interface StoryFilters {
-  category?: string;
-  tags?: string[];
+  categories?: string[];
   author?: string;
-  status?: string;
-  is_featured?: boolean;
-  content_rating?: string;
+  content_type?: 'story' | 'comic' | 'educational';
+  is_published?: boolean;
   search?: string;
-  sort_by?: 'created_at' | 'published_at' | 'views_count' | 'likes_count' | 'title';
+  sort_by?: 'created_at' | 'updated_at' | 'title';
   sort_order?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
@@ -73,45 +46,38 @@ export const useStories = (filters: StoryFilters = {}) => {
       setError(null);
 
       let query = supabase
-        .from('stories')
+        .from('content')
         .select(`
           *,
-          author:profiles!stories_author_id_fkey(id, username, avatar_url),
-          category:story_categories!stories_category_id_fkey(id, name, slug, icon, color),
-          tags:story_tags(tag),
-          analytics:story_analytics!story_analytics_story_id_fkey(views_count, likes_count, bookmarks_count, comments_count, shares_count, reading_sessions_count, average_reading_time, completion_rate)
+          author:users!content_author_id_fkey(id, email)
         `, { count: 'exact' });
 
       // Apply filters
-      if (filters.status) {
-        query = query.eq('status', filters.status);
+      if (filters.is_published !== undefined) {
+        query = query.eq('is_published', filters.is_published);
       } else {
-        // Default to published stories for public access
-        query = query.eq('status', 'published').eq('visibility', 'public');
+        // Default to published content for public access
+        query = query.eq('is_published', true);
       }
 
-      if (filters.category) {
-        query = query.eq('category.slug', filters.category);
+      if (filters.categories && filters.categories.length > 0) {
+        query = query.overlaps('categories', filters.categories);
       }
 
       if (filters.author) {
         query = query.eq('author_id', filters.author);
       }
 
-      if (filters.is_featured !== undefined) {
-        query = query.eq('is_featured', filters.is_featured);
-      }
-
-      if (filters.content_rating) {
-        query = query.eq('content_rating', filters.content_rating);
+      if (filters.content_type) {
+        query = query.eq('content_type', filters.content_type);
       }
 
       if (filters.search) {
-        query = query.textSearch('title,excerpt,content', filters.search);
+        query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
       }
 
       // Apply sorting
-      const sortBy = filters.sort_by || 'published_at';
+      const sortBy = filters.sort_by || 'created_at';
       const sortOrder = filters.sort_order || 'desc';
       
       query = query.order(sortBy, { ascending: sortOrder === 'asc' });
@@ -129,16 +95,10 @@ export const useStories = (filters: StoryFilters = {}) => {
       // Transform data to match our interface
       const transformedStories: Story[] = (data || []).map(story => ({
         ...story,
-        tags: story.tags?.map((t: any) => t.tag) || [],
-        analytics: story.analytics || {
-          views_count: 0,
-          likes_count: 0,
-          bookmarks_count: 0,
-          comments_count: 0,
-          shares_count: 0,
-          reading_sessions_count: 0,
-          average_reading_time: 0,
-          completion_rate: 0,
+        author: {
+          id: story.author?.id || '',
+          username: story.author?.email?.split('@')[0] || 'Unknown',
+          avatar_url: ''
         }
       }));
 
@@ -175,37 +135,18 @@ export const useStories = (filters: StoryFilters = {}) => {
   // Set up real-time subscription
   useEffect(() => {
     const channel = supabase
-      .channel('stories_changes')
+      .channel('content_changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'stories',
-          filter: 'status=eq.published'
+          table: 'content',
+          filter: 'is_published=eq.true'
         },
         (payload) => {
-          console.log('Story change detected:', payload);
+          console.log('Content change detected:', payload);
           refresh();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'story_analytics'
-        },
-        (payload) => {
-          console.log('Analytics change detected:', payload);
-          // Update analytics in real-time without full refresh
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            setStories(prev => prev.map(story => 
-              story.id === payload.new.story_id 
-                ? { ...story, analytics: payload.new }
-                : story
-            ));
-          }
         }
       )
       .subscribe();
@@ -238,13 +179,10 @@ export const useStory = (id: string) => {
         setError(null);
 
         const { data, error: fetchError } = await supabase
-          .from('stories')
+          .from('content')
           .select(`
             *,
-            author:profiles!stories_author_id_fkey(id, username, avatar_url),
-            category:story_categories!stories_category_id_fkey(id, name, slug, icon, color),
-            tags:story_tags(tag),
-            analytics:story_analytics(*)
+            author:users!content_author_id_fkey(id, email)
           `)
           .eq('id', id)
           .single();
@@ -254,16 +192,10 @@ export const useStory = (id: string) => {
         if (data) {
           const transformedStory: Story = {
             ...data,
-            tags: data.tags?.map((t: any) => t.tag) || [],
-            analytics: data.analytics || {
-              views_count: 0,
-              likes_count: 0,
-              bookmarks_count: 0,
-              comments_count: 0,
-              shares_count: 0,
-              reading_sessions_count: 0,
-              average_reading_time: 0,
-              completion_rate: 0,
+            author: {
+              id: data.author?.id || '',
+              username: data.author?.email?.split('@')[0] || 'Unknown',
+              avatar_url: ''
             }
           };
 
@@ -272,12 +204,14 @@ export const useStory = (id: string) => {
           // Track view
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
+            // Track view in reading history
             await supabase
-              .from('user_story_interactions')
+              .from('reading_history')
               .upsert({
                 user_id: user.id,
-                story_id: id,
-                interaction_type: 'view'
+                content_id: id,
+                content_type: 'story',
+                progress: 0
               });
           }
         }

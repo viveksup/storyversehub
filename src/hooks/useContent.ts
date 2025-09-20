@@ -15,14 +15,26 @@ export const useContent = (userId: string | undefined) => {
         setLoading(true);
         const { data, error } = await supabase
           .from('content')
-          .select('*')
+          .select(`
+            *,
+            author:users!content_author_id_fkey(id, email)
+          `)
           .eq('author_id', userId)
           .order('updated_at', { ascending: false });
 
         if (error) throw error;
 
-        setDrafts(data?.filter(item => !item.is_published) || []);
-        setPublished(data?.filter(item => item.is_published) || []);
+        const transformedData = (data || []).map(item => ({
+          ...item,
+          author: {
+            id: item.author?.id || '',
+            username: item.author?.email?.split('@')[0] || 'Unknown',
+            avatar_url: ''
+          }
+        }));
+
+        setDrafts(transformedData.filter(item => !item.is_published));
+        setPublished(transformedData.filter(item => item.is_published));
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch content'));
       } finally {
