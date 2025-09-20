@@ -8,7 +8,6 @@ import {
 import StoriesGrid from '../components/stories/StoriesGrid';
 import CategoryGrid from '../components/stories/CategoryGrid';
 import Button from '../components/ui/Button';
-import DraftsList from '../components/ui/DraftsList';
 import RealtimeStats from '../components/dashboard/RealtimeStats';
 import ActivityFeed from '../components/dashboard/ActivityFeed';
 import { supabase } from '../lib/supabase';
@@ -22,19 +21,19 @@ const DashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
 
   // Fetch user's recent stories and recommendations
-  const { stories: recentStories, loading: recentLoading, refresh: refreshRecent } = useStories({
+  const { stories: recentStories, loading: recentLoading } = useStories({
     sort_by: 'published_at',
     sort_order: 'desc',
     limit: 4
   });
 
-  const { stories: featuredStories, loading: featuredLoading, refresh: refreshFeatured } = useStories({
+  const { stories: featuredStories, loading: featuredLoading } = useStories({
     is_featured: true,
     limit: 4
   });
 
-  const { stories: popularStories, loading: popularLoading, refresh: refreshPopular } = useStories({
-    sort_by: 'published_at', // Fallback to date sorting
+  const { stories: popularStories, loading: popularLoading } = useStories({
+    sort_by: 'views_count',
     sort_order: 'desc',
     limit: 4
   });
@@ -82,33 +81,27 @@ const DashboardPage: React.FC = () => {
 
   const handleLikeStory = async (storyId: string) => {
     if (user?.id) {
-      const { error } = await supabase
+      await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'like'
         });
-        
-      if (!error) {
-        await logUserActivity('story_liked', storyId);
-      }
+      await logUserActivity('story_liked', storyId);
     }
   };
 
   const handleBookmarkStory = async (storyId: string) => {
     if (user?.id) {
-      const { error } = await supabase
+      await supabase
         .from('user_story_interactions')
         .upsert({
           user_id: user.id,
           story_id: storyId,
           interaction_type: 'bookmark'
         });
-        
-      if (!error) {
-        await logUserActivity('story_bookmarked', storyId);
-      }
+      await logUserActivity('story_bookmarked', storyId);
     }
   };
 
@@ -362,14 +355,14 @@ const DashboardPage: React.FC = () => {
                     Create
                   </Button>
                 </Link>
-                <Link to="/create">
+                <Link to="/profile">
                   <Button 
                     variant="secondary"
                     size="sm"
                     leftIcon={<BookText size={16} />}
                     className="w-full"
                   >
-                    My Drafts
+                    My Stories
                   </Button>
                 </Link>
                 <Link to="/bookmarks">
@@ -393,11 +386,6 @@ const DashboardPage: React.FC = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
-
-            {/* My Drafts */}
-            <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-6 border border-space-light/20">
-              <DraftsList />
             </div>
 
             {/* Reading Goals with Real-time Updates */}

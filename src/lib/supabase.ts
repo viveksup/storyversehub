@@ -1,121 +1,161 @@
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a fallback client with dummy values if environment variables are missing
-const createSupabaseClient = () => {
-  // Only validate if real values are provided
-  const hasValidUrl = supabaseUrl && 
-    !supabaseUrl.includes('placeholder') && 
-    !supabaseUrl.includes('your_supabase_project_url_here') &&
-    supabaseUrl.startsWith('https://');
+// Debug logging for environment variables
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key exists:', !!supabaseAnonKey);
 
-  const hasValidKey = supabaseAnonKey && 
-    !supabaseAnonKey.includes('placeholder') && 
-    !supabaseAnonKey.includes('your_supabase_anon_key_here');
-
-  // Use valid values if available, otherwise use safe defaults
-  const url = hasValidUrl ? supabaseUrl : 'https://placeholder.supabase.co';
-  const key = hasValidKey ? supabaseAnonKey : 'placeholder-key';
-
-  // Only validate URL format if we have what appears to be a real URL
-  if (hasValidUrl && hasValidKey) {
-    try {
-      new URL(supabaseUrl);
-    } catch (error) {
-      console.error(`Invalid Supabase URL format: ${supabaseUrl}`);
-    }
-  }
-
-  return createClient(url, key, {
-    realtime: {
-      params: { eventsPerSecond: 10 },
-    },
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing environment variables:', {
+    VITE_SUPABASE_URL: !!supabaseUrl,
+    VITE_SUPABASE_ANON_KEY: !!supabaseAnonKey
   });
+  throw new Error('Missing Supabase environment variables. Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set correctly.');
+}
+
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  throw new Error(`Invalid Supabase URL format: ${supabaseUrl}. Please ensure it follows the format: https://your-project-ref.supabase.co`);
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
+
+// Profile management functions
+export const updateProfile = async (userId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return { data: null, error };
+  }
 };
 
-export const supabase = createSupabaseClient();
+// File upload helpers
+export const uploadFile = async (bucket: string, userId: string, file: File) => {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
 
-// ✅ Fixed: removed duplicate return + mismatched braces
-export const isSupabaseConfigured = () => {
-  return !!(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    supabaseUrl !== 'https://placeholder.supabase.co' &&
-    supabaseAnonKey !== 'placeholder-key' &&
-    !supabaseUrl.includes('your_supabase_project_url_here') &&
-    !supabaseAnonKey.includes('your_supabase_anon_key_here')
-  );
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(filePath);
+
+    return { url: publicUrl, error: null };
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    return { url: null, error };
+  }
 };
 
-// Enhanced client with error handling
-const createEnhancedClient = () => {
-  return {
-    ...supabase,
-    auth: {
-      ...supabase.auth,
-      signInWithPassword: async (credentials: any) => {
-        if (!isSupabaseConfigured()) {
-          throw new Error(
-            'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
-          );
-        }
-        return supabase.auth.signInWithPassword(credentials);
+// Real-time subscription helpers
+export const subscribeToProfile = (userId: string, callback: (payload: any) => void) => {
+  return supabase
+    .channel(`profile:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${userId}`
       },
-      signUp: async (credentials: any) => {
-        if (!isSupabaseConfigured()) {
-          throw new Error(
-            'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
-          );
-        }
-        return supabase.auth.signUp(credentials);
-      },
-      getUser: async () => {
-        if (!isSupabaseConfigured()) {
-          return { data: { user: null }, error: null };
-        }
-        return supabase.auth.getUser();
-      },
-      onAuthStateChange: (callback: any) => {
-        if (!isSupabaseConfigured()) {
-          return { data: { subscription: { unsubscribe: () => {} } } };
-        }
-        return supabase.auth.onAuthStateChange(callback);
-      },
-    },
-    from: (table: string) => {
-      const originalFrom = supabase.from(table);
-      return {
-        ...originalFrom,
-        select: (...args: any[]) =>
-          isSupabaseConfigured()
-            ? originalFrom.select(...args)
-            : Promise.resolve({ data: [], error: null, count: 0 }),
-        insert: (...args: any[]) =>
-          isSupabaseConfigured()
-            ? originalFrom.insert(...args)
-            : Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        update: (...args: any[]) =>
-          isSupabaseConfigured()
-            ? originalFrom.update(...args)
-            : Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        delete: (...args: any[]) =>
-          isSupabaseConfigured()
-            ? originalFrom.delete(...args)
-            : Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        upsert: (...args: any[]) =>
-          isSupabaseConfigured()
-            ? originalFrom.upsert(...args)
-            : Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      };
-    },
-  };
+      callback
+    )
+    .subscribe();
 };
 
-export default createEnhancedClient();
+export const subscribeToContent = (userId: string, callback: (payload: any) => void) => {
+  return supabase
+    .channel(`content:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'content',
+        filter: `author_id=eq.${userId}`
+      },
+      callback
+    )
+    .subscribe();
+};
+
+// Content management functions
+export const saveContentDraft = async (userId: string, content: any) => {
+  try {
+    const { data, error } = await supabase
+      .from('content')
+      .upsert({
+        id: content.id || uuidv4(),
+        author_id: userId,
+        ...content,
+        is_published: false,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error saving draft:', error);
+    return { data: null, error };
+  }
+};
+
+export const publishContent = async (contentId: string, userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('content')
+      .update({
+        is_published: true,
+        updated_at: new Date().toISOString()
+      })
+      .match({ id: contentId, author_id: userId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error publishing content:', error);
+    return { data: null, error };
+  }
+};

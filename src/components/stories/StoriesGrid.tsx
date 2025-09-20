@@ -46,15 +46,14 @@ const StoriesGrid: React.FC<StoriesGridProps> = ({
   if (!loading && stories.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <BookOpen size={48} className="text-gray-400 mb-4" />
+        <div className="w-16 h-16 bg-space-light/30 rounded-full flex items-center justify-center mb-4">
+          <span className="text-2xl">📚</span>
+        </div>
         <h3 className="text-lg font-semibold text-white mb-2">
           {emptyMessage}
         </h3>
         <p className="text-gray-400 text-center max-w-md">
-          {emptyMessage.includes('No stories found') 
-            ? 'Try adjusting your filters or search terms.'
-            : 'Check back later for new content or be the first to create a story!'
-          }
+          Try adjusting your filters or check back later for new content.
         </p>
       </div>
     );
@@ -74,20 +73,6 @@ const StoriesGrid: React.FC<StoriesGridProps> = ({
             onShare={onShare}
           />
         ))}
-        
-        {/* Show loading placeholders while loading */}
-        {loading && stories.length === 0 && (
-          Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="w-64 h-80 bg-space-base/30 rounded-xl animate-pulse">
-              <div className="w-full h-48 bg-space-light/20 rounded-t-xl"></div>
-              <div className="p-4 space-y-2">
-                <div className="h-4 bg-space-light/20 rounded w-3/4"></div>
-                <div className="h-3 bg-space-light/20 rounded w-1/2"></div>
-                <div className="h-3 bg-space-light/20 rounded w-2/3"></div>
-              </div>
-            </div>
-          ))
-        )}
       </div>
 
       {/* Loading indicator */}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { supabase, subscribeToContent, saveContentDraft, publishContent } from '../lib/supabase';
 
 export const useContent = (userId: string | undefined) => {
@@ -63,7 +64,7 @@ export const useContent = (userId: string | undefined) => {
       setLoading(true);
       const contentWithId = {
         ...content,
-        id: content.id || crypto.randomUUID()
+        id: content.id || uuidv4()
       };
       
       const { data, error } = await saveContentDraft(userId, contentWithId);
