@@ -1,120 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a fallback client with dummy values if environment variables are missing
-// This prevents the app from crashing during development
-const createSupabaseClient = () => {
-  // Use fallback values if environment variables are not set
-  const url = supabaseUrl || 'https://placeholder.supabase.co';
-  const key = supabaseAnonKey || 'placeholder-key';
-  
-  // Only validate if we have real values
-  if (supabaseUrl && supabaseAnonKey) {
-    try {
-      new URL(supabaseUrl);
-    } catch (error) {
-      console.error(`Invalid Supabase URL format: ${supabaseUrl}`);
-    }
-  }
-  
-  return createClient(url, key, {
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
-    },
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
+// Debug logging for environment variables
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Anon Key exists:', !!supabaseAnonKey);
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing environment variables:', {
+    VITE_SUPABASE_URL: !!supabaseUrl,
+    VITE_SUPABASE_ANON_KEY: !!supabaseAnonKey
   });
-};
+  throw new Error('Missing Supabase environment variables. Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set correctly.');
+}
 
-export const supabase = createSupabaseClient();
+// Validate URL format
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  throw new Error(`Invalid Supabase URL format: ${supabaseUrl}. Please ensure it follows the format: https://your-project-ref.supabase.co`);
+}
 
-// Helper function to check if Supabase is properly configured
-export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseAnonKey && 
-    supabaseUrl !== 'https://placeholder.supabase.co' && 
-    supabaseAnonKey !== 'placeholder-key');
-};
-
-// Enhanced client with error handling
-const createEnhancedClient = () => {
-  return {
-    ...supabase,
-    auth: {
-      ...supabase.auth,
-      signInWithPassword: async (credentials: any) => {
-        if (!isSupabaseConfigured()) {
-          throw new Error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
-        }
-        return supabase.auth.signInWithPassword(credentials);
-      },
-      signUp: async (credentials: any) => {
-        if (!isSupabaseConfigured()) {
-          throw new Error('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.');
-        }
-        return supabase.auth.signUp(credentials);
-      },
-      getUser: async () => {
-        if (!isSupabaseConfigured()) {
-          return { data: { user: null }, error: null };
-        }
-        return supabase.auth.getUser();
-      },
-      onAuthStateChange: (callback: any) => {
-        if (!isSupabaseConfigured()) {
-          // Return a dummy subscription that does nothing
-          return { data: { subscription: { unsubscribe: () => {} } } };
-        }
-        return supabase.auth.onAuthStateChange(callback);
-      }
-    },
-    from: (table: string) => {
-      const originalFrom = supabase.from(table);
-      return {
-        ...originalFrom,
-        select: (...args: any[]) => {
-          if (!isSupabaseConfigured()) {
-            return Promise.resolve({ data: [], error: null, count: 0 });
-          }
-          return originalFrom.select(...args);
-        },
-        insert: (...args: any[]) => {
-          if (!isSupabaseConfigured()) {
-            return Promise.resolve({ data: null, error: new Error('Supabase not configured') });
-          }
-          return originalFrom.insert(...args);
-        },
-        update: (...args: any[]) => {
-          if (!isSupabaseConfigured()) {
-            return Promise.resolve({ data: null, error: new Error('Supabase not configured') });
-          }
-          return originalFrom.update(...args);
-        },
-        delete: (...args: any[]) => {
-          if (!isSupabaseConfigured()) {
-            return Promise.resolve({ data: null, error: new Error('Supabase not configured') });
-          }
-          return originalFrom.delete(...args);
-        },
-        upsert: (...args: any[]) => {
-          if (!isSupabaseConfigured()) {
-            return Promise.resolve({ data: null, error: new Error('Supabase not configured') });
-          }
-          return originalFrom.upsert(...args);
-        }
-      };
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
     }
-  };
-};
-
-// Export the enhanced client as the default export
-export default createEnhancedClient();
+  },
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 // Profile management functions
 export const updateProfile = async (userId: string, updates: any) => {
@@ -141,7 +61,7 @@ export const updateProfile = async (userId: string, updates: any) => {
 export const uploadFile = async (bucket: string, userId: string, file: File) => {
   try {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${crypto.randomUUID()}.${fileExt}`;
+    const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${userId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
@@ -201,11 +121,12 @@ export const subscribeToContent = (userId: string, callback: (payload: any) => v
 export const saveContentDraft = async (userId: string, content: any) => {
   try {
     const { data, error } = await supabase
-      .from('story_drafts')
+      .from('content')
       .upsert({
-        id: content.id || crypto.randomUUID(),
+        id: content.id || uuidv4(),
         author_id: userId,
         ...content,
+        is_published: false,
         updated_at: new Date().toISOString()
       })
       .select()
