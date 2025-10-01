@@ -49,7 +49,7 @@ export const useStories = (filters: StoryFilters = {}) => {
         .from('content')
         .select(`
           *,
-          author:users!content_author_id_fkey(id, email)
+          author:author_id(id, email)
         `, { count: 'exact' });
 
       // Apply filters
@@ -90,17 +90,26 @@ export const useStories = (filters: StoryFilters = {}) => {
 
       const { data, error: fetchError, count } = await query;
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('Supabase query error:', fetchError);
+        throw fetchError;
+      }
 
       // Transform data to match our interface
       const transformedStories: Story[] = (data || []).map(story => ({
         ...story,
-        author: {
-          id: story.author?.id || '',
-          username: story.author?.email?.split('@')[0] || 'Unknown',
+        author: story.author ? {
+          id: story.author.id || '',
+          username: story.author.email?.split('@')[0] || 'Unknown',
+          avatar_url: ''
+        } : {
+          id: '',
+          username: 'Unknown',
           avatar_url: ''
         }
       }));
+
+      console.log('Fetched stories:', transformedStories);
 
       if (reset) {
         setStories(transformedStories);
@@ -112,6 +121,7 @@ export const useStories = (filters: StoryFilters = {}) => {
       setHasMore((offset + limit) < (count || 0));
 
     } catch (err) {
+      console.error('Error fetching stories:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch stories'));
     } finally {
       setLoading(false);
@@ -182,7 +192,7 @@ export const useStory = (id: string) => {
           .from('content')
           .select(`
             *,
-            author:users!content_author_id_fkey(id, email)
+            author:author_id(id, email)
           `)
           .eq('id', id)
           .single();
@@ -192,9 +202,13 @@ export const useStory = (id: string) => {
         if (data) {
           const transformedStory: Story = {
             ...data,
-            author: {
-              id: data.author?.id || '',
-              username: data.author?.email?.split('@')[0] || 'Unknown',
+            author: data.author ? {
+              id: data.author.id || '',
+              username: data.author.email?.split('@')[0] || 'Unknown',
+              avatar_url: ''
+            } : {
+              id: '',
+              username: 'Unknown',
               avatar_url: ''
             }
           };

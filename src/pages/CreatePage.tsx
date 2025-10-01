@@ -165,37 +165,39 @@ const CreatePage: React.FC = () => {
       return;
     }
 
-    let result;
+    // Create content directly in the content table
+    try {
+      const { data, error } = await supabase
+        .from('content')
+        .insert({
+          title,
+          description: excerpt || content.substring(0, 200) + '...',
+          content_type: 'story',
+          cover_image: coverImage || null,
+          pages: content ? [content] : [],
+          categories: tags,
+          author_id: user.id,
+          is_published: true
+        })
+        .select()
+        .single();
 
-    if (currentDraft?.id) {
-      // Publish existing draft
-      result = await publishStory(currentDraft.id);
-    } else {
-      // Create and publish new story
-      const storyData: Partial<StoryDraft> = {
-        title,
-        content,
-        excerpt,
-        category_id: categoryId || undefined,
-        tags,
-        content_rating: contentRating,
-        cover_image_url: coverImage || undefined,
-        language: 'en',
-        metadata: {}
-      };
-      result = await publishStory(undefined, storyData);
-    }
+      if (error) {
+        console.error('Publish error:', error);
+        alert('Failed to publish story. Please try again.');
+        return;
+      }
 
-    if (result.error) {
-      console.error('Publish error:', result.error);
+      if (data) {
+        setSuccess('Story published successfully!');
+        setTimeout(() => {
+          navigate(`/story/${data.id}`);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Publish error:', err);
+      alert('Failed to publish story. Please try again.');
       return;
-    }
-
-    if (result.data) {
-      setSuccess('Story published successfully!');
-      setTimeout(() => {
-        navigate(`/story/${result.data.slug || result.data.id}`);
-      }, 1500);
     }
   };
 
