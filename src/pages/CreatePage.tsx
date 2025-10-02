@@ -167,6 +167,17 @@ const CreatePage: React.FC = () => {
 
     // Create content directly in the content table
     try {
+      console.log('Publishing story with data:', {
+        title,
+        description: excerpt || content.substring(0, 200) + '...',
+        content_type: 'story',
+        cover_image: coverImage || null,
+        pages: content ? [content] : [],
+        categories: tags,
+        author_id: user.id,
+        is_published: true
+      });
+
       const { data, error } = await supabase
         .from('content')
         .insert({
@@ -187,6 +198,8 @@ const CreatePage: React.FC = () => {
         alert('Failed to publish story. Please try again.');
         return;
       }
+
+      console.log('Story published successfully:', data);
 
       if (data) {
         setSuccess('Story published successfully!');

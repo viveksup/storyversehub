@@ -23,18 +23,19 @@ const DashboardPage: React.FC = () => {
 
   // Fetch user's recent stories and recommendations
   const { stories: recentStories, loading: recentLoading } = useStories({
-    sort_by: 'published_at',
+    sort_by: 'created_at',
     sort_order: 'desc',
     limit: 4
   });
 
   const { stories: featuredStories, loading: featuredLoading } = useStories({
-    is_featured: true,
+    sort_by: 'updated_at',
+    sort_order: 'desc',
     limit: 4
   });
 
   const { stories: popularStories, loading: popularLoading } = useStories({
-    sort_by: 'views_count',
+    sort_by: 'created_at',
     sort_order: 'desc',
     limit: 4
   });

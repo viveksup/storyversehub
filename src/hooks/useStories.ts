@@ -45,12 +45,11 @@ export const useStories = (filters: StoryFilters = {}) => {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching stories with filters:', filters);
+
       let query = supabase
         .from('content')
-        .select(`
-          *,
-          author:author_id(id, email)
-        `, { count: 'exact' });
+        .select('*', { count: 'exact' });
 
       // Apply filters
       if (filters.is_published !== undefined) {
@@ -95,21 +94,54 @@ export const useStories = (filters: StoryFilters = {}) => {
         throw fetchError;
       }
 
-      // Transform data to match our interface
-      const transformedStories: Story[] = (data || []).map(story => ({
-        ...story,
-        author: story.author ? {
-          id: story.author.id || '',
-          username: story.author.email?.split('@')[0] || 'Unknown',
-          avatar_url: ''
-        } : {
-          id: '',
-          username: 'Unknown',
-          avatar_url: ''
-        }
-      }));
+      console.log('Raw data from Supabase:', data);
+      console.log('Total count:', count);
 
-      console.log('Fetched stories:', transformedStories);
+      // Transform data to match our interface
+      const transformedStories: Story[] = (data || []).map(story => {
+        console.log('Processing story:', story);
+        
+        // Get author info from users table
+        const transformedStory = {
+          ...story,
+          cover_image: story.cover_image || '',
+          categories: Array.isArray(story.categories) ? story.categories : [],
+          pages: Array.isArray(story.pages) ? story.pages : [],
+          author: {
+            id: story.author_id || '',
+            username: 'Loading...',
+            avatar_url: ''
+          }
+        };
+
+        return transformedStory;
+      });
+
+      // Fetch author information separately
+      if (transformedStories.length > 0) {
+        const authorIds = [...new Set(transformedStories.map(s => s.author_id))];
+        
+        const { data: authorsData } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', authorIds);
+
+        console.log('Authors data:', authorsData);
+
+        // Update stories with author info
+        transformedStories.forEach(story => {
+          const author = authorsData?.find(a => a.id === story.author_id);
+          if (author) {
+            story.author = {
+              id: author.id,
+              username: author.username || 'Unknown',
+              avatar_url: author.avatar_url || ''
+            };
+          }
+        });
+      }
+
+      console.log('Final transformed stories:', transformedStories);
 
       if (reset) {
         setStories(transformedStories);
@@ -190,22 +222,29 @@ export const useStory = (id: string) => {
 
         const { data, error: fetchError } = await supabase
           .from('content')
-          .select(`
-            *,
-            author:author_id(id, email)
-          `)
+          .select('*')
           .eq('id', id)
           .single();
 
         if (fetchError) throw fetchError;
 
         if (data) {
+          // Get author info
+          const { data: authorData } = await supabase
+            .from('profiles')
+            .select('id, username, avatar_url')
+            .eq('id', data.author_id)
+            .single();
+
           const transformedStory: Story = {
             ...data,
-            author: data.author ? {
-              id: data.author.id || '',
-              username: data.author.email?.split('@')[0] || 'Unknown',
-              avatar_url: ''
+            cover_image: data.cover_image || '',
+            categories: Array.isArray(data.categories) ? data.categories : [],
+            pages: Array.isArray(data.pages) ? data.pages : [],
+            author: authorData ? {
+              id: authorData.id,
+              username: authorData.username || 'Unknown',
+              avatar_url: authorData.avatar_url || ''
             } : {
               id: '',
               username: 'Unknown',
