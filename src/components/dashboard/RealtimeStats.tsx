@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, BookOpen, Target, TrendingUp, Activity } from 'lucide-react';
+import { Clock, BookOpen, Target, TrendingUp, Activity, Zap, Eye, Heart } from 'lucide-react';
 import { useRealtimeUserData } from '../../hooks/useRealtimeUserData';
 
 interface RealtimeStatsProps {
@@ -17,118 +17,88 @@ const RealtimeStats: React.FC<RealtimeStatsProps> = ({ userId }) => {
 
   return (
     <div className="space-y-6">
-      {/* Online Status */}
-      <div className="flex items-center gap-2 text-sm">
-        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-        <span className="text-gray-400">
-          {isOnline ? 'Online' : 'Offline'}
-        </span>
+      {/* Status Card */}
+      <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-display font-semibold text-white">Status</h3>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+            <span className="text-sm text-gray-400">
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
+        </div>
+        
+        {currentReadingSession && (
+          <div className="bg-primary-900/20 rounded-lg p-3 border border-primary-500/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity size={16} className="text-primary-400" />
+              <span className="text-sm font-medium text-white">Currently Reading</span>
+            </div>
+            <div className="text-xs text-gray-400 space-y-1">
+              <div>Session: {Math.floor(currentReadingSession.duration / 60)}m {currentReadingSession.duration % 60}s</div>
+              <div>Progress: {currentReadingSession.progressPercentage}%</div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Current Reading Session */}
-      {currentReadingSession && (
-        <div className="bg-space-light/20 rounded-xl p-4 border border-primary-500/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Activity size={16} className="text-primary-400" />
-            <span className="text-sm font-medium text-white">Currently Reading</span>
+      {/* Personal Insights */}
+      <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
+        <h3 className="text-lg font-display font-semibold text-white mb-4 flex items-center gap-2">
+          <Zap size={20} className="text-warning-400" />
+          Your Insights
+        </h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye size={16} className="text-primary-400" />
+              <span className="text-sm text-gray-400">Reading Speed</span>
+            </div>
+            <span className="text-white font-semibold">
+              {userStats.readingSpeed} WPM
+            </span>
           </div>
-          <div className="text-xs text-gray-400">
-            Session: {Math.floor(currentReadingSession.duration / 60)}m {currentReadingSession.duration % 60}s
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-secondary-400" />
+              <span className="text-sm text-gray-400">Avg Session</span>
+            </div>
+            <span className="text-white font-semibold">
+              {Math.floor(userStats.totalReadingTime / Math.max(userStats.totalStoriesRead, 1))}m
+            </span>
           </div>
-          <div className="text-xs text-gray-400">
-            Progress: {currentReadingSession.progressPercentage}%
-          </div>
-        </div>
-      )}
-
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-space-light/30 rounded-lg text-primary-400">
-              <BookOpen size={20} />
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Heart size={16} className="text-accent-400" />
+              <span className="text-sm text-gray-400">Favorite Time</span>
             </div>
-            <div>
-              <p className="text-sm text-gray-400">Stories Read</p>
-              <p className="text-xl font-display font-bold text-white">
-                {userStats.totalStoriesRead}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-space-light/30 rounded-lg text-secondary-400">
-              <Clock size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">Reading Time</p>
-              <p className="text-xl font-display font-bold text-white">
-                {formatReadingTime(userStats.totalReadingTime)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-space-light/30 rounded-lg text-accent-400">
-              <TrendingUp size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">Reading Streak</p>
-              <p className="text-xl font-display font-bold text-white">
-                {userStats.currentStreak} days
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-space-light/30 rounded-lg text-success-400">
-              <Target size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">Weekly Goal</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xl font-display font-bold text-white">
-                  {Math.round(userStats.weeklyProgress)}%
-                </p>
-                <div className="flex-1 h-2 bg-space-dark rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-success-500 rounded-full transition-all duration-500"
-                    style={{ width: `${userStats.weeklyProgress}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
+            <span className="text-white font-semibold">
+              {userStats.readingPatterns.preferredTimeOfDay}
+            </span>
           </div>
         </div>
       </div>
 
       {/* Favorite Genres */}
       <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-        <h3 className="text-sm font-medium text-white mb-3">Favorite Genres</h3>
+        <h3 className="text-lg font-display font-semibold text-white mb-4 flex items-center gap-2">
+          <Star size={20} className="text-accent-400" />
+          Favorite Genres
+        </h3>
         <div className="flex flex-wrap gap-2">
           {userStats.favoriteGenres.map((genre, index) => (
             <span 
               key={index}
-              className="px-2 py-1 bg-primary-600/20 text-primary-400 rounded-full text-xs"
+              className="px-3 py-1.5 bg-primary-600/20 text-primary-400 rounded-full text-sm font-medium"
             >
               {genre}
             </span>
           ))}
         </div>
-      </div>
-
-      {/* Reading Speed */}
-      <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-4 border border-space-light/20">
-        <h3 className="text-sm font-medium text-white mb-2">Reading Speed</h3>
-        <p className="text-2xl font-display font-bold text-primary-400">
-          {userStats.readingSpeed} <span className="text-sm text-gray-400">WPM</span>
-        </p>
       </div>
     </div>
   );

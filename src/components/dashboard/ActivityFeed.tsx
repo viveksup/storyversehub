@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, BookOpen, Bookmark, MessageCircle, UserPlus, Clock } from 'lucide-react';
+import { Heart, BookOpen, Bookmark, MessageCircle, UserPlus, Clock, Activity, TrendingUp } from 'lucide-react';
 import { useRealtimeUserData } from '../../hooks/useRealtimeUserData';
 
 interface ActivityFeedProps {
@@ -72,38 +72,55 @@ const ActivityFeed: React.FC<ActivityFeedProps> = ({ userId }) => {
   };
 
   return (
-    <div className="bg-space-base/50 backdrop-blur-sm rounded-xl p-6 border border-space-light/20">
-      <h3 className="text-xl font-display font-semibold text-white mb-4">
-        Recent Activity
-      </h3>
+    <div className="bg-space-base/50 backdrop-blur-sm rounded-xl border border-space-light/20 overflow-hidden">
+      <div className="p-6 border-b border-space-light/20">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-display font-semibold text-white flex items-center gap-2">
+            <Activity size={20} className="text-success-400" />
+            Recent Activity
+          </h3>
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <TrendingUp size={14} />
+            <span>Last 7 days</span>
+          </div>
+        </div>
+      </div>
       
-      {recentActivity.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-400">No recent activity</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {recentActivity.map((activity) => (
-            <div 
-              key={activity.id}
-              className="flex items-start gap-3 p-3 rounded-lg bg-space-light/10 hover:bg-space-light/20 transition-colors"
-            >
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-space-dark flex items-center justify-center">
-                {getActivityIcon(activity.activityType)}
+      <div className="max-h-80 overflow-y-auto">
+        {recentActivity.length === 0 ? (
+          <div className="text-center py-12">
+            <Activity size={48} className="mx-auto mb-4 text-gray-400 opacity-50" />
+            <p className="text-gray-400">No recent activity</p>
+            <p className="text-sm text-gray-500 mt-1">Start reading stories to see your activity here</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-space-light/10">
+            {recentActivity.map((activity) => (
+              <div 
+                key={activity.id}
+                className="flex items-start gap-4 p-4 hover:bg-space-light/10 transition-colors"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-space-dark flex items-center justify-center border border-space-light/30">
+                  {getActivityIcon(activity.activityType)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium">
+                    {getActivityMessage(activity)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formatTimeAgo(activity.createdAt)}
+                  </p>
+                </div>
+                
+                <div className="text-xs text-gray-500">
+                  {new Date(activity.createdAt).toLocaleDateString()}
+                </div>
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white">
-                  {getActivityMessage(activity)}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {formatTimeAgo(activity.createdAt)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
