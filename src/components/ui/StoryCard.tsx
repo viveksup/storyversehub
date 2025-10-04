@@ -66,7 +66,7 @@ const StoryCard: React.FC<StoryCardProps> = ({
               {views}
             </div>
             <div className="flex items-center text-gray-400 text-xs">
-              <Heart size={12} className="mr-1" fill="#f472b6" className="text-accent-400" />
+              <Heart size={12} className="mr-1 text-accent-400" fill="#f472b6" />
               {likes}
             </div>
           </div>

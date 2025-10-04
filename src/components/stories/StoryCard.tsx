@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Eye, Clock, Star, Bookmark, Share2 } from 'lucide-react';
+import { Heart, Eye, Clock, Star, Bookmark, Share2, BookOpen } from 'lucide-react';
 import { Story } from '../../hooks/useStories';
 
 interface StoryCardProps {

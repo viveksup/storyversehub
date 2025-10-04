@@ -136,13 +136,13 @@ const Navbar: React.FC = () => {
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             
-            {/* Message Notifications */}
-            {user && (
+            {/* Message Notifications - Temporarily disabled until message_notifications table is created */}
+            {/* {user && (
               <MessageNotifications
                 userId={user.id}
                 onNotificationClick={handleMessageNotificationClick}
               />
-            )}
+            )} */}
             
             {/* Regular Notifications */}
             {user && (
