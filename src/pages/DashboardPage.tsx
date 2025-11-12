@@ -127,7 +127,7 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-space-dark pt-20">
+    <div className="pt-20">
       {/* Hero Welcome Section */}
       <div className="relative bg-gradient-to-br from-space-light via-space-base to-space-dark py-12 overflow-hidden">
         {/* Background Effects */}
@@ -264,7 +264,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 bg-space-dark min-h-screen">
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
           {/* Main Content Column */}
           <div className="xl:col-span-3 space-y-8">
